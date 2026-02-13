@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>溫室氣體盤查機器人 · 碳管家</title>
+    <!-- 使用柔和的自然色系與友善介面 -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(145deg, #e8f4e5 0%, #d1e9d0 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+
+        /* 主卡片容器 — 融合綠意與乾淨白底 */
+        .chat-container {
+            max-width: 1000px;
+            width: 100%;
+            background-color: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 42px 42px 36px 36px;
+            box-shadow: 0 20px 40px -8px rgba(40, 70, 40, 0.4),
+                        0 0 0 1px rgba(120, 150, 120, 0.2) inset;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        /* 頁首：品牌與機器人狀態 */
+        .header {
+            background: #2f5e4e;
+            color: white;
+            padding: 1.4rem 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+            border-bottom: 4px solid #afcbac;
+        }
+
+        .header h1 {
+            font-weight: 500;
+            font-size: 1.8rem;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header h1 span {
+            background: #b7d7b0;
+            color: #1c3b2f;
+            font-size: 1rem;
+            padding: 0.2rem 1rem;
+            border-radius: 40px;
+            font-weight: 400;
+            margin-left: 0.5rem;
+        }
+
+        .badge-container {
+            margin-left: auto;
+            display: flex;
+            gap: 12px;
+        }
+
+        .badge {
+            background: #457a66;
+            padding: 0.4rem 1rem;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            font-weight: 400;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            border: 1px solid #9bc0a2;
+            color: #f5fdee;
+        }
+
+        /* 主要聊天區塊 (機器人回應+詢問面板) */
+        .chat-area {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 機器人對話顯示區 */
+        .conversation {
+            background: #f9fff9;
+            padding: 2rem 2rem 1.5rem 2rem;
+            max-height: 380px;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+            border-bottom: 2px dashed #c0ddbc;
+        }
+
+        /* 訊息氣泡 */
+        .message {
+            display: flex;
+            margin-bottom: 1.4rem;
+            align-items: flex-end;
+        }
+
+        .message.bot {
+            justify-content: flex-start;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .bubble {
+            max-width: 75%;
+            padding: 0.9rem 1.5rem;
+            border-radius: 28px 28px 8px 28px;
+            font-size: 1rem;
+            line-height: 1.5;
+            box-shadow: 0 4px 8px rgba(0, 20, 0, 0.04);
+            word-break: break-word;
+        }
+
+        .bot .bubble {
+            background: #e1f0dd;
+            border-radius: 8px 28px 28px 28px;
+            color: #1f3b2c;
+            border: 1px solid #bcdbb6;
+        }
+
+        .user .bubble {
+            background: #30755b;
+            color: white;
+            border-radius: 28px 8px 28px 28px;
+            border: 1px solid #1d543f;
+        }
+
+        .timestamp {
+            font-size: 0.65rem;
+            color: #748d74;
+            margin: 0 0.5rem 0.3rem 0.5rem;
+        }
+
+        /* 係數分類快捷卡片 (詢問面板) */
+        .query-panel {
+            padding: 1.8rem 2rem 2rem 2rem;
+            background: #ffffffd9;
+            backdrop-filter: blur(4px);
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: #1d4e3d;
+            margin-bottom: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .section-title i {
+            font-size: 1.6rem;
+        }
+
+        .coefficient-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .coef-card {
+            background: #f0f9ef;
+            padding: 1.2rem 1rem;
+            border-radius: 26px;
+            border: 1px solid #bcd9b2;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 2px 6px rgba(100, 130, 100, 0.1);
+        }
+
+        .coef-card:hover {
+            background: #dff2db;
+            border-color: #609f6b;
+            transform: translateY(-4px);
+            box-shadow: 0 16px 20px -12px #6f9e7a;
+        }
+
+        .coef-card h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1f573f;
+            margin-bottom: 0.3rem;
+        }
+
+        .coef-card p {
+            font-size: 0.85rem;
+            color: #3b5b48;
+            opacity: 0.9;
+        }
+
+        /* 常見詢問項目區塊 (碳足跡/盤查) */
+        .faq-section {
+            background: #eaf6e9;
+            border-radius: 32px;
+            padding: 1.5rem 1.8rem;
+            margin-top: 1.2rem;
+            border: 1px solid #b1cfb1;
+        }
+
+        .faq-title {
+            font-weight: 500;
+            color: #204e34;
+            margin-bottom: 1.2rem;
+            font-size: 1.1rem;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .faq-bubbles {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.7rem;
+        }
+
+        .faq-item {
+            background: white;
+            border: 1px solid #9fc0a2;
+            color: #1b4a32;
+            padding: 0.6rem 1.4rem;
+            border-radius: 40px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.15s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .faq-item:hover {
+            background: #31755b;
+            color: white;
+            border-color: #246b4a;
+            box-shadow: 0 8px 14px -8px #2d6b4c;
+        }
+
+        /* 輸入列 */
+        .input-area {
+            display: flex;
+            padding: 1.3rem 2rem 1.8rem 2rem;
+            background: #e2f0df;
+            gap: 0.8rem;
+            align-items: center;
+            border-top: 2px solid #b7d7b2;
+        }
+
+        .input-area input {
+            flex: 1;
+            padding: 1rem 1.5rem;
+            border: none;
+            border-radius: 40px;
+            background: white;
+            font-size: 1rem;
+            outline: 2px solid transparent;
+            transition: 0.2s;
+            box-shadow: 0 2px 8px rgba(70, 100, 70, 0.1);
+        }
+
+        .input-area input:focus {
+            outline: 2px solid #538e70;
+            background-color: #f6fff0;
+        }
+
+        .send-btn {
+            background: #1f604a;
+            color: white;
+            border: none;
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            font-size: 1.6rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: 0.15s;
+            box-shadow: 0 4px 8px #467a5e;
+            line-height: 1;
+        }
+
+        .send-btn:hover {
+            background: #124f3b;
+            transform: scale(1.04);
+        }
+
+        .send-btn:active {
+            transform: scale(0.97);
+        }
+
+        /* 模擬機器人回覆中之小提示 */
+        .footnote {
+            text-align: center;
+            padding: 0.8rem 1rem;
+            background: #cfe5cb;
+            color: #194433;
+            font-size: 0.8rem;
+            letter-spacing: 0.3px;
+            border-top: 1px solid #aac8aa;
+        }
+
+        /* 簡易emoji */
+        .icon-leaf {
+            display: inline-block;
+            font-size: 1.2rem;
+            filter: drop-shadow(0 2px 2px #559966);
+        }
+
+        /* Render部署提示 */
+        .deploy-hint {
+            background: #286b4e20;
+            border-radius: 20px;
+            padding: 0.2rem 1.2rem;
+            color: #2a5e45;
+            font-size: 0.85rem;
+            border: 1px dashed #457a60;
+        }
+    </style>
+</head>
+<body>
+<div class="chat-container">
+    <!-- 頁首 包含溫室氣體品牌與Render就緒標籤 -->
+    <div class="header">
+        <h1>
+            🌱 溫室氣體盤查機器人
+            <span>係數分類 v1.0</span>
+        </h1>
+        <div class="badge-container">
+            <div class="badge">📦 GitHub 即時同步</div>
+            <div class="badge deploy-hint">⚡ Render 部署連結</div>
+        </div>
+    </div>
+
+    <!-- 對話視窗 (機器人與使用者互動) -->
+    <div class="chat-area">
+        <div class="conversation" id="conversation">
+            <!-- 歡迎訊息 (bot) -->
+            <div class="message bot">
+                <div class="bubble">
+                    🌍 您好！我是碳管家，專精於溫室氣體盤查（ISO 14064-1）、產品碳足跡（ISO 14067）以及排放係數分類。<br>
+                    您可以點擊下方的 <strong>係數分類</strong> 卡片，或直接輸入任何碳盤查/碳足跡問題 💬
+                </div>
+                <div class="timestamp">機器人 現在</div>
+            </div>
+            <!-- 範例回應佔位 (之後會由JS動態插入) -->
+        </div>
+
+        <!-- 係數分類 + 常見項目詢問面板 -->
+        <div class="query-panel">
+            <div class="section-title">
+                <span class="icon-leaf">📋</span> 排放係數分類 (可直接點擊詢問)
+            </div>
+            <div class="coefficient-grid" id="coefGrid">
+                <!-- 以下卡片將透過JS綁定，同時保留靜態結構 -->
+                <div class="coef-card" data-question="範疇一 直接排放係數有哪些？">
+                    <h3>🔹 範疇一 · 直接排放</h3>
+                    <p>固定燃燒、製程、逸散、交通 … 詢問係數清單</p>
+                </div>
+                <div class="coef-card" data-question="範疇二 能源間接排放係數（電力、蒸氣）">
+                    <h3>🔸 範疇二 · 能源間接</h3>
+                    <p>台電排放係數、蒸氣、熱能係數</p>
+                </div>
+                <div class="coef-card" data-question="範疇三 其他間接排放係數（運輸、廢棄物、商務旅行）">
+                    <h3>🔹 範疇三 · 其他間接</h3>
+                    <p>上下游運輸、員工通勤、租賃⋯</p>
+                </div>
+                <div class="coef-card" data-question="生質物排放係數該如何處理？">
+                    <h3>🌾 生質碳係數</h3>
+                    <p>生質燃燒/廢棄物，生物源CO₂</p>
+                </div>
+                <div class="coef-card" data-question="碳足跡係數：原料取得、製造、配送">
+                    <h3>👣 產品碳足跡</h3>
+                    <p>原料、製造、運輸、使用階段</p>
+                </div>
+                <div class="coef-card" data-question="冷媒/製程排放係數查詢">
+                    <h3>❄️ 冷媒與逸散</h3>
+                    <p>GWP值、冷媒外洩係數</p>
+                </div>
+            </div>
+
+            <!-- 常見詢問項目 (碳盤查/碳足跡可能問題) -->
+            <div class="faq-section">
+                <div class="faq-title">
+                    <span>🌿 碳足跡 & 盤查常見詢問</span> 
+                    <span style="font-size:0.85rem; background:#56997130; padding:0.2rem 1rem; border-radius:20px;">點擊直接提問</span>
+                </div>
+                <div class="faq-bubbles" id="faqList">
+                    <span class="faq-item" data-question="什麼是活動數據？如何收集？">活動數據怎麼收集？</span>
+                    <span class="faq-item" data-question="全球暖化潛勢(GWP)值從哪裡查？">GWP值 查詢來源</span>
+                    <span class="faq-item" data-question="排放係數是否含GWP？">係數包含GWP嗎？</span>
+                    <span class="faq-item" data-question="組織邊界如何設定？">設定組織邊界</span>
+                    <span class="faq-item" data-question="生物源碳排放要算在範疇一嗎？">生物源碳計算</span>
+                    <span class="faq-item" data-question="購買的綠電憑證如何扣除排放？">綠電憑證扣除</span>
+                    <span class="faq-item" data-question="碳足跡類別規則（PCR）哪裡找？">PCR 哪裡找？</span>
+                    <span class="faq-item" data-question="什麼是二次數據與一次數據？">一次/二次數據</span>
+                    <span class="faq-item" data-question="排放係數缺失怎麼辦？">係數缺失替代</span>
+                </div>
+                <!-- 提醒可自訂輸入 -->
+                <p style="font-size:0.85rem; margin-top:1.2rem; color:#386651;">💡 也可以在下方輸入任何碳盤查、碳足跡、係數的問題……</p>
+            </div>
+        </div>
+
+        <!-- 文字輸入區 + 送出 -->
+        <div class="input-area">
+            <input type="text" id="userInput" placeholder="例： 範疇二最新電力係數？ 水泥碳足跡？" autocomplete="off">
+            <button class="send-btn" id="sendBtn" title="送出訊息">➤</button>
+        </div>
+        <div class="footnote">
+            ⚙️ 已預先設定 Render 串接 GitHub 自動部署 · 機器人持續學習碳管理知識
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // 取得DOM元素
+        const conversationDiv = document.getElementById('conversation');
+        const userInput = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendBtn');
+        // 所有可點擊的元素 (係數卡片 + FAQ項目)
+        const coefCards = document.querySelectorAll('.coef-card');
+        const faqItems = document.querySelectorAll('.faq-item');
+
+        // 工具函數：新增訊息到對話框 (type: 'user' 或 'bot', 文字內容)
+        function addMessage(type, text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', type);
+
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.classList.add('bubble');
+            bubbleDiv.innerText = text;
+
+            const timestamp = document.createElement('div');
+            timestamp.classList.add('timestamp');
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+            timestamp.innerText = (type === 'bot' ? '機器人' : '我') + ' ' + timeStr;
+
+            messageDiv.appendChild(bubbleDiv);
+            messageDiv.appendChild(timestamp);
+            conversationDiv.appendChild(messageDiv);
+
+            // 自動捲到底部
+            conversationDiv.scrollTop = conversationDiv.scrollHeight;
+        }
+
+        // 機器人回應邏輯 (模擬根據問題回應，可擴充對接Render API)
+        function getBotReply(question) {
+            const q = question.trim().toLowerCase();
+
+            // 預先定義一些簡單的對應 (展示用，實際上可連接至後端)
+            if (q.includes('範疇一') || (q.includes('直接排放') && q.includes('係數'))) {
+                return "📋 範疇一（直接排放）常用係數：固定燃燒排放係數 (如燃油/天然氣) 可參考環保署排放係數表；製程排放如水泥、鋼鐵需用特定製程係數；冷媒逸散則依GWP值計算。您需要哪一種活動數據？";
+            } else if (q.includes('範疇二') || q.includes('電力係數') || q.includes('台電')) {
+                return "⚡ 範疇二間接排放：最新台電電力排碳係數為 0.495 kg CO₂e/度 (2023年公開數據)。若使用再生能源憑證，可扣除對應排放。蒸氣/熱能係數則依鍋爐效率與燃料種類。";
+            } else if (q.includes('範疇三') || q.includes('其他間接')) {
+                return "📦 範疇三涵蓋15類，常見係數：外部運輸(噸公里)、員工通勤(延人公里)、廢棄物處理(每公斤)、商務旅行(延人公里)。可參考環保署/經濟部係數或國外資料庫(如DEFRA)。";
+            } else if (q.includes('生質') || q.includes('生物源')) {
+                return "🌱 生質碳排放：生物質燃燒/廢棄產生之CO₂原則上不計入範疇一(但要申報為生質碳)，但甲烷(CH₄)與氧化亞氮(N₂O)仍須計入。係數可查IPCC或環保署生質廢棄物係數。";
+            } else if (q.includes('碳足跡') || q.includes('產品碳足跡')) {
+                return "👣 產品碳足跡係數 (CFP) 涵蓋原料、製造、配送、使用、廢棄。可查詢環保署產品碳足跡資料庫或用環境宣告(EPD)。您想了解特定產品嗎？";
+            } else if (q.includes('冷媒') || q.includes('gwp')) {
+                return "❄️ 冷媒GWP值：R22 (1810)、R134a (1430)、R410a (2088)、R32 (675)。逸散率依設備類型與保養狀況估算，請提供冷媒種類及填充量。";
+            } else if (q.includes('活動數據')) {
+                return "📊 活動數據包含：燃料用量(公升/度/公斤)、原物料耗用、運輸延噸公里、廢棄物重量等。收集方式可從發票、採購記錄、電表/瓦斯帳單、行車紀錄器等取得。";
+            } else if (q.includes('gwp值') || q.includes('全球暖化潛勢')) {
+                return "📈 GWP值主要引用IPCC AR5 (或AR6) 報告，如CO₂=1, CH₄=28, N₂O=265, SF₆=23500。最新數值請參照聯合國氣候變遷專門委員會或環保署公告。";
+            } else if (q.includes('邊界')) {
+                return "🏭 組織邊界有「股權比例法」或「控制權法」(財務/營運)。先界定納入的設施/子公司，再區分範疇一、二、三。可用營運控制權最常見。";
+            } else if (q.includes('綠電') || q.includes('憑證')) {
+                return "🔋 購買再生能源憑證(T-REC)或國際REC，在範疇二排放計算可扣除對應電力之排放。但需符合GHG Protocol 或 ISO 14064-1 中市場基礎方法。";
+            } else if (q.includes('pcr')) {
+                return "📑 產品類別規則(PCR)可至 EPD 國際網站 (environdec.com) 或環保署產品碳足跡資訊網查詢。每一種產品類別有其特定PCR。";
+            } else if (q.includes('二次數據') || q.includes('一次數據')) {
+                return "🔎 一次數據(初級數據)為組織自測/自算的活動數據；二次數據(次級數據)來自資料庫或文獻。盤查時優先使用一次數據，不足再以二次數據補齊。";
+            } else if (q.includes('係數缺失')) {
+                return "🧩 係數若缺失，可使用相近製程/燃料替代係數，或採用IPCC預設值、國外資料庫(ecoinvent, GaBi)，並於報告書說明不確定性。";
+            } else if (q.includes('分類') || q.includes('謝謝')) {
+                return "🌻 不客氣！碳排分類主要為三大範疇，另可細分為移動/固定燃燒、製程、逸散、間接等。還有其他分類疑問嗎？";
+            } else {
+                // 若無對應則回覆引導，並暗示後端串接可能性
+                return "🤖 您的問題已收到 (「" + question + "」)。\n此原型涵蓋係數分類與常見碳議題，正式版將串接 Render 上的碳知識API。您可以點選上方卡片或輸入其他關鍵字 (例如：範疇一、電力係數、冷媒、GWP)。";
+            }
+        }
+
+        // 處理發送使用者訊息
+        function handleUserMessage() {
+            const text = userInput.value.trim();
+            if (text === '') return;
+
+            // 顯示使用者訊息
+            addMessage('user', text);
+
+            // 模擬機器人「正在輸入」效果 (可省略，直接顯示回應)
+            setTimeout(() => {
+                const reply = getBotReply(text);
+                addMessage('bot', reply);
+            }, 400); // 稍微延遲更像真人
+
+            userInput.value = ''; // 清空輸入欄
+        }
+
+        // 綁定送出按鈕
+        sendBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            handleUserMessage();
+        });
+
+        // 綁定輸入框 Enter 鍵
+        userInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleUserMessage();
+            }
+        });
+
+        // 為所有係數卡片加上點擊事件 (取出data-question 當作提問)
+        coefCards.forEach(card => {
+            card.addEventListener('click', function() {
+                const question = this.getAttribute('data-question') || "請介紹這項係數分類";
+                // 將提問填入輸入框 (可選) 並自動送出，或者直接當作訊息
+                userInput.value = question;  // 可讓使用者再編輯
+                // 直接呼叫送出，更加直覺
+                handleUserMessage();
+            });
+        });
+
+        // 為所有faq項目加上點擊事件
+        faqItems.forEach(item => {
+            item.addEventListener('click', function() {
+                const question = this.getAttribute('data-question') || this.innerText;
+                userInput.value = question;
+                handleUserMessage();
+            });
+        });
+
+        // 加載完成後，額外新增一個提示性機器人訊息？可不必，因為已有歡迎詞。
+        // 但為了示範動態新增，可以加入一條溫馨提示（但保留簡潔）
+        // 也可在 3 秒後推播一則引導(可選)
+        setTimeout(() => {
+            // 避免打擾，僅在對話只有一條歡迎訊息時增加小提示
+            if (conversationDiv.children.length === 1) {
+                addMessage('bot', '💡 試著點擊上面的「係數分類」或常見問題，我會立即回答。需要查詢任何碳盤查/碳足跡都歡迎！');
+            }
+        }, 800);
+    })();
+</script>
+<!-- 確保所有點擊事件與動態訊息正常，內嵌樣式已完備 -->
+</body>
+</html>
