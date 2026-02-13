@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>碳盤查專家 · DeepSeek 顧問</title>
+    <style>
+        /* 此處沿用之前的 CSS 樣式，為了簡潔省略，請複製之前的 style 內容 */
+        /* 但需新增一個「專家分析模式」的切換按鈕樣式 */
+        .mode-switch {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+            padding: 10px;
+            background: #e8f4e5;
+            border-radius: 40px;
+        }
+        .mode-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 30px;
+            background: transparent;
+            cursor: pointer;
+            font-weight: 500;
+            transition: 0.2s;
+        }
+        .mode-btn.active {
+            background: #2f5e4e;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+<div class="chat-container">
+    <!-- 頁首 -->
+    <div class="header">
+        <h1>
+            🌱 碳盤查專家顧問
+            <span>DeepSeek 驅動</span>
+        </h1>
+        <div class="badge-container">
+            <div class="badge">📊 20年經驗 · 永續專家</div>
+            <div class="badge deploy-hint">⚡ ISO 14064-1/14067</div>
+        </div>
+    </div>
+
+    <!-- 對話視窗 -->
+    <div class="chat-area">
+        <div class="conversation" id="conversation">
+            <div class="message bot">
+                <div class="bubble">
+                    🌍 您好，我是您的碳管理顧問，擁有20年環境永續經驗。<br><br>
+                    <strong>專精領域：</strong><br>
+                    • ISO 14064-1 組織碳盤查（類別1-6）<br>
+                    • ISO 14067 產品碳足跡（Cradle-to-Gate/Grave）<br>
+                    • 排放係數資料庫（IPCC/IEA/環保署/Ecoinvent）<br>
+                    • 工業製程分析與節能診斷<br><br>
+                    請告訴我您的企業概況、生產流程或任何碳管理問題，我將以顧問身份為您診斷。
+                </div>
+                <div class="timestamp">專家 現在</div>
+            </div>
+        </div>
+
+        <!-- 專家模式切換 -->
+        <div class="query-panel">
+            <div class="mode-switch">
+                <button class="mode-btn active" data-mode="general">💬 一般諮詢</button>
+                <button class="mode-btn" data-mode="industry">🏭 行業分析</button>
+                <button class="mode-btn" data-mode="calculation">🧮 排放計算</button>
+            </div>
+
+            <!-- 快速提問卡片 -->
+            <div class="section-title">
+                <span class="icon-leaf">📋</span> 專家諮詢主題
+            </div>
+            <div class="coefficient-grid" id="expertTopics">
+                <div class="coef-card" data-question="請說明ISO 14064-1的類別1-6如何界定？">
+                    <h3>📌 類別界定</h3>
+                    <p>範疇一至三的排放源分類原則</p>
+                </div>
+                <div class="coef-card" data-question="組織邊界該用營運控制權法還是財務控制權法？">
+                    <h3>🔲 邊界設定</h3>
+                    <p>營運控制權 vs 財務控制權</p>
+                </div>
+                <div class="coef-card" data-question="產品碳足跡Cradle-to-Gate和Cradle-to-Grave的差異？">
+                    <h3>👣 系統邊界</h3>
+                    <p>搖籃到大門 vs 搖籃到墳墓</p>
+                </div>
+                <div class="coef-card" data-question="排放係數該如何選擇？IPCC、環保署、DEFRA的差異？">
+                    <h3>📊 係數選擇</h3>
+                    <p>資料庫比較與適用情境</p>
+                </div>
+            </div>
+
+            <!-- 產業常見問題 -->
+            <div class="faq-section">
+                <div class="faq-title">
+                    <span>🔧 製程與設備診斷</span>
+                </div>
+                <div class="faq-bubbles" id="processFaq">
+                    <span class="faq-item" data-question="鍋爐的排放源有哪些？如何計算？">鍋爐排放計算</span>
+                    <span class="faq-item" data-question="空壓機系統如何進行節能診斷？">空壓機節能</span>
+                    <span class="faq-item" data-question="冰機/冷凍設備的冷媒逸散如何估算？">冷媒逸散估算</span>
+                    <span class="faq-item" data-question="如何進行產品碳足跡的熱點分析？">碳足跡熱點</span>
+                    <span class="faq-item" data-question="盤查報告書的數據品質要求？">數據品質等級</span>
+                    <span class="faq-item" data-question="CBAM對鋼鐵/鋁/水泥產業的影響？">CBAM因應</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 輸入區 -->
+        <div class="input-area">
+            <input type="text" id="userInput" placeholder="請描述您的企業概況或詢問碳管理問題..." autocomplete="off">
+            <button class="send-btn" id="sendBtn">➤</button>
+        </div>
+        <div class="footnote">
+            ⚡ 由 DeepSeek AI 驅動 · 嚴格遵循 ISO 14064-1 與 ISO 14067 規範
+        </div>
+    </div>
+</div>
+
+<script>
+    const conversationDiv = document.getElementById('conversation');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const modeBtns = document.querySelectorAll('.mode-btn');
+    const expertTopics = document.querySelectorAll('.coef-card');
+    const processFaq = document.querySelectorAll('.faq-item');
+
+    let currentMode = 'general';
+    let conversationHistory = [];
+
+    // 切換模式
+    modeBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            modeBtns.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            currentMode = this.dataset.mode;
+            
+            // 根據模式改變提示文字
+            if (currentMode === 'industry') {
+                userInput.placeholder = '輸入行業別與製程描述，例如：鋼鐵業 電弧爐製程...';
+            } else if (currentMode === 'calculation') {
+                userInput.placeholder = '輸入活動數據，例如：天然氣1000立方公尺、用電5000度...';
+            } else {
+                userInput.placeholder = '請描述您的企業概況或詢問碳管理問題...';
+            }
+        });
+    });
+
+    // 新增訊息
+    function addMessage(role, content) {
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('message', role === 'user' ? 'user' : 'bot');
+
+        const bubbleDiv = document.createElement('div');
+        bubbleDiv.classList.add('bubble');
+        
+        // 處理換行
+        bubbleDiv.innerText = content;
+
+        const timestamp = document.createElement('div');
+        timestamp.classList.add('timestamp');
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+        timestamp.innerText = (role === 'user' ? '我' : '專家') + ' ' + timeStr;
+
+        messageDiv.appendChild(bubbleDiv);
+        messageDiv.appendChild(timestamp);
+        conversationDiv.appendChild(messageDiv);
+        conversationDiv.scrollTop = conversationDiv.scrollHeight;
+
+        // 儲存到歷史記錄
+        conversationHistory.push({ role, content });
+    }
+
+    // 顯示載入中
+    function showLoading() {
+        const loadingDiv = document.createElement('div');
+        loadingDiv.classList.add('message', 'bot');
+        loadingDiv.id = 'loading-message';
+        
+        const bubbleDiv = document.createElement('div');
+        bubbleDiv.classList.add('bubble');
+        bubbleDiv.innerHTML = '⏳ 專家思考中...';
+        
+        loadingDiv.appendChild(bubbleDiv);
+        conversationDiv.appendChild(loadingDiv);
+        conversationDiv.scrollTop = conversationDiv.scrollHeight;
+    }
+
+    // 移除載入中
+    function removeLoading() {
+        const loading = document.getElementById('loading-message');
+        if (loading) loading.remove();
+    }
+
+    // 發送訊息到後端
+    async function sendMessage(message) {
+        if (!message.trim()) return;
+
+        // 顯示使用者訊息
+        addMessage('user', message);
+        
+        // 顯示載入中
+        showLoading();
+
+        try {
+            // 根據模式選擇不同的 API 端點
+            let apiUrl = '/api/chat';
+            let payload = {
+                message: message,
+                history: conversationHistory.slice(-10) // 傳送最近10筆
+            };
+
+            if (currentMode === 'industry') {
+                apiUrl = '/api/analyze-industry';
+                payload = {
+                    industry: message,
+                    process_description: ''
+                };
+            } else if (currentMode === 'calculation') {
+                apiUrl = '/api/calculate-emission';
+                payload = {
+                    emission_source: '一般排放源',
+                    activity_data: { description: message }
+                };
+            }
+
+            // 呼叫 API
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+            
+            // 移除載入中
+            removeLoading();
+
+            if (response.ok) {
+                const reply = data.reply || data.analysis || data.calculation || '無法取得回應';
+                addMessage('assistant', reply);
+            } else {
+                addMessage('assistant', `⚠️ 錯誤：${data.error || '無法連接到專家系統'}`);
+            }
+        } catch (error) {
+            removeLoading();
+            addMessage('assistant', '⚠️ 網路連線錯誤，請稍後再試。');
+            console.error('Error:', error);
+        }
+
+        userInput.value = '';
+    }
+
+    // 綁定事件
+    sendBtn.addEventListener('click', () => sendMessage(userInput.value));
+    userInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendMessage(userInput.value);
+    });
+
+    // 綁定快速提問
+    expertTopics.forEach(card => {
+        card.addEventListener('click', () => {
+            const question = card.dataset.question;
+            userInput.value = question;
+            sendMessage(question);
+        });
+    });
+
+    processFaq.forEach(item => {
+        item.addEventListener('click', () => {
+            const question = item.dataset.question;
+            userInput.value = question;
+            sendMessage(question);
+        });
+    });
+</script>
+</body>
+</html>
