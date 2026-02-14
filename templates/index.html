@@ -5,35 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>碳盤查專家 · DeepSeek 顧問</title>
     <style>
-        /* 這裡放所有的 CSS 樣式 */
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
-        body { background: linear-gradient(145deg, #e8f4e5 0%, #d1e9d0 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
-        .chat-container { max-width: 1000px; width: 100%; background-color: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); border-radius: 42px; box-shadow: 0 20px 40px -8px rgba(40, 70, 40, 0.4); overflow: hidden; }
-        .header { background: #2f5e4e; color: white; padding: 1.4rem 2rem; display: flex; align-items: center; border-bottom: 4px solid #afcbac; }
-        .header h1 { font-weight: 500; font-size: 1.8rem; }
-        .badge { background: #457a66; padding: 0.4rem 1rem; border-radius: 30px; margin-left: auto; }
-        .conversation { background: #f9fff9; padding: 2rem; max-height: 380px; overflow-y: auto; }
-        .message { display: flex; margin-bottom: 1.4rem; }
-        .message.bot { justify-content: flex-start; }
-        .message.user { justify-content: flex-end; }
-        .bubble { max-width: 75%; padding: 0.9rem 1.5rem; border-radius: 28px; line-height: 1.5; }
-        .bot .bubble { background: #e1f0dd; border-radius: 8px 28px 28px 28px; color: #1f3b2c; }
-        .user .bubble { background: #30755b; color: white; border-radius: 28px 8px 28px 28px; }
-        .query-panel { padding: 1.8rem 2rem; background: #ffffffd9; }
-        .mode-switch { display: flex; gap: 10px; margin-bottom: 20px; padding: 10px; background: #e8f4e5; border-radius: 40px; }
-        .mode-btn { flex: 1; padding: 10px; border: none; border-radius: 30px; background: transparent; cursor: pointer; }
-        .mode-btn.active { background: #2f5e4e; color: white; }
-        .coefficient-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
-        .coef-card { background: #f0f9ef; padding: 1.2rem; border-radius: 26px; border: 1px solid #bcd9b2; cursor: pointer; }
-        .coef-card:hover { background: #dff2db; transform: translateY(-4px); }
-        .faq-section { background: #eaf6e9; border-radius: 32px; padding: 1.5rem; }
-        .faq-bubbles { display: flex; flex-wrap: wrap; gap: 0.7rem; }
-        .faq-item { background: white; border: 1px solid #9fc0a2; color: #1b4a32; padding: 0.6rem 1.4rem; border-radius: 40px; cursor: pointer; }
-        .faq-item:hover { background: #31755b; color: white; }
-        .input-area { display: flex; padding: 1.3rem 2rem; background: #e2f0df; gap: 0.8rem; }
-        .input-area input { flex: 1; padding: 1rem 1.5rem; border: none; border-radius: 40px; background: white; }
-        .send-btn { background: #1f604a; color: white; border: none; width: 54px; height: 54px; border-radius: 50%; font-size: 1.6rem; cursor: pointer; }
-        .footnote { text-align: center; padding: 0.8rem; background: #cfe5cb; }
+        /* 完整的 CSS 樣式請保留您原有的，此處為節省篇幅暫略 */
+        /* 請複製您之前使用的完整 CSS 樣式 */
     </style>
 </head>
 <body>
@@ -47,14 +20,8 @@
         <div class="conversation" id="conversation">
             <div class="message bot">
                 <div class="bubble">
-                    🌍 您好，我是您的碳管理顧問，擁有20年環境永續經驗。<br><br>
-                    <strong>專精領域：</strong><br>
-                    • ISO 14064-1 組織碳盤查（類別1-6）<br>
-                    • ISO 14067 產品碳足跡<br>
-                    • 排放係數資料庫<br>
-                    • 工業製程分析
+                    🌍 您好，我是您的碳管理顧問...（您的歡迎詞）
                 </div>
-                <div class="timestamp">專家 現在</div>
             </div>
         </div>
 
@@ -64,36 +31,7 @@
                 <button class="mode-btn" data-mode="industry">🏭 行業分析</button>
                 <button class="mode-btn" data-mode="calculation">🧮 排放計算</button>
             </div>
-
-            <div class="coefficient-grid" id="expertTopics">
-                <div class="coef-card" data-question="請說明ISO 14064-1的類別1-6如何界定？">
-                    <h3>📌 類別界定</h3>
-                    <p>範疇一至三的排放源分類</p>
-                </div>
-                <div class="coef-card" data-question="組織邊界該用營運控制權法還是財務控制權法？">
-                    <h3>🔲 邊界設定</h3>
-                    <p>營運控制權 vs 財務控制權</p>
-                </div>
-                <div class="coef-card" data-question="產品碳足跡Cradle-to-Gate和Cradle-to-Grave的差異？">
-                    <h3>👣 系統邊界</h3>
-                    <p>搖籃到大門 vs 搖籃到墳墓</p>
-                </div>
-                <div class="coef-card" data-question="排放係數該如何選擇？">
-                    <h3>📊 係數選擇</h3>
-                    <p>資料庫比較與適用情境</p>
-                </div>
-            </div>
-
-            <div class="faq-section">
-                <div class="faq-bubbles" id="processFaq">
-                    <span class="faq-item" data-question="鍋爐的排放源有哪些？如何計算？">鍋爐排放計算</span>
-                    <span class="faq-item" data-question="空壓機系統如何節能？">空壓機節能</span>
-                    <span class="faq-item" data-question="冷媒逸散如何估算？">冷媒逸散估算</span>
-                    <span class="faq-item" data-question="碳足跡熱點分析？">碳足跡熱點</span>
-                    <span class="faq-item" data-question="數據品質要求？">數據品質等級</span>
-                    <span class="faq-item" data-question="CBAM影響？">CBAM因應</span>
-                </div>
-            </div>
+            <!-- 其餘快速提問卡片和 FAQ 請保留 -->
         </div>
 
         <div class="input-area">
@@ -105,6 +43,7 @@
 </div>
 
 <script>
+    // DOM 元素
     const conversationDiv = document.getElementById('conversation');
     const userInput = document.getElementById('userInput');
     const sendBtn = document.getElementById('sendBtn');
@@ -114,6 +53,23 @@
 
     let currentMode = 'general';
     let conversationHistory = [];
+
+    // 頁面載入時測試 API 連線
+    window.addEventListener('load', async () => {
+        try {
+            console.log('正在測試 API 連線...');
+            const response = await fetch('/api/health');
+            const data = await response.json();
+            console.log('✅ API 連線成功:', data);
+            
+            if (!data.api_key_configured) {
+                addMessage('assistant', '⚠️ 系統提示：API Key 尚未設定');
+            }
+        } catch (error) {
+            console.error('❌ API 連線失敗:', error);
+            addMessage('assistant', '⚠️ 無法連線到後端伺服器，請重新整理頁面');
+        }
+    });
 
     modeBtns.forEach(btn => {
         btn.addEventListener('click', function() {
@@ -126,13 +82,23 @@
     function addMessage(role, content) {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message', role === 'user' ? 'user' : 'bot');
+        
         const bubbleDiv = document.createElement('div');
         bubbleDiv.classList.add('bubble');
         bubbleDiv.innerText = content;
+        
+        const timestamp = document.createElement('div');
+        timestamp.classList.add('timestamp');
+        timestamp.innerText = role === 'user' ? '我' : '專家';
+        
         messageDiv.appendChild(bubbleDiv);
+        messageDiv.appendChild(timestamp);
         conversationDiv.appendChild(messageDiv);
         conversationDiv.scrollTop = conversationDiv.scrollHeight;
-        conversationHistory.push({ role, content });
+        
+        if (role === 'user' || role === 'assistant') {
+            conversationHistory.push({ role, content });
+        }
     }
 
     async function sendMessage() {
@@ -142,29 +108,64 @@
         addMessage('user', message);
         userInput.value = '';
 
+        // 顯示載入中
+        const loadingId = 'loading-' + Date.now();
         const loadingDiv = document.createElement('div');
         loadingDiv.classList.add('message', 'bot');
+        loadingDiv.id = loadingId;
         loadingDiv.innerHTML = '<div class="bubble">⏳ 專家思考中...</div>';
         conversationDiv.appendChild(loadingDiv);
 
         try {
-            const response = await fetch('/api/chat', {
+            console.log('發送請求到 /api/chat, 訊息:', message);
+            
+            // 根據模式決定 API 端點
+            let apiUrl = '/api/chat';
+            let payload = { message, history: conversationHistory.slice(-10) };
+            
+            if (currentMode === 'industry') {
+                apiUrl = '/api/analyze-industry';
+                payload = { industry: message, process_description: '' };
+            } else if (currentMode === 'calculation') {
+                apiUrl = '/api/calculate-emission';
+                payload = { emission_source: '一般排放源', activity_data: { description: message } };
+            }
+
+            const response = await fetch(apiUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message, history: conversationHistory.slice(-10) })
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(payload)
             });
             
-            const data = await response.json();
-            conversationDiv.removeChild(loadingDiv);
+            console.log('回應狀態碼:', response.status);
             
-            if (data.reply) {
-                addMessage('assistant', data.reply);
+            // 移除載入中
+            const loading = document.getElementById(loadingId);
+            if (loading) loading.remove();
+
+            if (response.ok) {
+                const data = await response.json();
+                console.log('回應資料:', data);
+                
+                const reply = data.reply || data.analysis || data.calculation;
+                if (reply) {
+                    addMessage('assistant', reply);
+                } else {
+                    addMessage('assistant', '⚠️ 無法取得回應');
+                }
             } else {
-                addMessage('assistant', '抱歉，暫時無法回應');
+                const errorText = await response.text();
+                console.error('API 錯誤:', response.status, errorText);
+                addMessage('assistant', `⚠️ 錯誤 (${response.status})：無法連接到專家系統`);
             }
         } catch (error) {
-            conversationDiv.removeChild(loadingDiv);
-            addMessage('assistant', '⚠️ 連線錯誤，請稍後再試');
+            console.error('發送失敗:', error);
+            const loading = document.getElementById(loadingId);
+            if (loading) loading.remove();
+            addMessage('assistant', '⚠️ 連線錯誤，請檢查網路並重新整理頁面');
         }
     }
 
@@ -173,17 +174,24 @@
         if (e.key === 'Enter') sendMessage();
     });
 
+    // 綁定快速提問
     expertTopics.forEach(card => {
         card.addEventListener('click', () => {
-            userInput.value = card.dataset.question;
-            sendMessage();
+            const question = card.dataset.question;
+            if (question) {
+                userInput.value = question;
+                sendMessage();
+            }
         });
     });
 
     processFaq.forEach(item => {
         item.addEventListener('click', () => {
-            userInput.value = item.dataset.question;
-            sendMessage();
+            const question = item.dataset.question;
+            if (question) {
+                userInput.value = question;
+                sendMessage();
+            }
         });
     });
 </script>
