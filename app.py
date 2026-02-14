@@ -150,10 +150,10 @@ def debug_env():
         "files": os.listdir('.')
     })
 
-# ========== 一般聊天功能 ==========
+# ========== 一般諮詢功能 ==========
 @app.route('/api/chat', methods=['POST'])
 def chat():
-    """一般聊天功能"""
+    """一般諮詢 - 回答各種碳盤查問題"""
     logger.info("收到 /api/chat 請求")
     
     try:
@@ -208,7 +208,7 @@ def chat():
         logger.error(f"錯誤: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-# ========== 新增：行業排放源查詢功能（獨立端點）==========
+# ========== 行業排放源查詢功能 ==========
 @app.route('/api/industry-emissions', methods=['POST'])
 def industry_emissions():
     """行業別排放源查詢 - 讓使用者輸入行業別和排放源，BOT確認範疇和係數"""
@@ -305,10 +305,10 @@ def industry_emissions():
         logger.error(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
-# ========== 行業分析功能 ==========
+# ========== 行業分析功能 (模式2) ==========
 @app.route('/api/analyze-industry', methods=['POST'])
 def analyze_industry():
-    """分析行業別的整體排放概況"""
+    """🏭 行業分析 - 針對特定行業進行完整排放分析"""
     logger.info("收到 /api/analyze-industry 請求")
     
     try:
@@ -322,17 +322,41 @@ def analyze_industry():
         if not DEEPSEEK_API_KEY:
             return jsonify({'error': 'DeepSeek API Key 未設定'}), 500
         
-        prompt = f"""請以碳管理顧問的身份，針對{industry}行業進行排放源分析。
+        prompt = f"""請以碳管理顧問的身份，針對「{industry}」行業進行完整的排放源分析。
         
-        {f'製程描述：{process_desc}' if process_desc else ''}
+        {f'製程描述：{process_desc}' if process_desc else '請根據一般行業特性分析'}
         
-        請提供：
-        1. 此行業的主要排放類別（範疇一至三）
-        2. 關鍵排放設備與製程
-        3. 建議的排放係數來源
-        4. 常見的數據收集難點與解決建議
-        5. 初步的減碳機會識別
-        """
+        請提供以下詳細分析：
+
+【1. 行業概述】
+- 主要製程流程
+- 常見設備與設施
+
+【2. 排放源分類 (範疇一/二/三)】
+- 範疇一排放源：______ (列出所有可能的直接排放源)
+- 範疇二排放源：______ (電力、蒸氣、熱能等)
+- 範疇三排放源：______ (上下游運輸、廢棄物、商務旅行等)
+
+【3. 關鍵排放設備與係數】
+- 設備/製程 | 排放源 | 建議係數 | 係數來源
+(用表格列出至少5個關鍵排放點)
+
+【4. 數據收集建議】
+- 需要收集哪些活動數據
+- 數據來源與收集方式
+- 常見困難與解決方案
+
+【5. 減碳機會識別】
+- 短期可行措施
+- 中長期規劃
+- 預期減碳效果
+
+【6. 行業特定注意事項】
+- 法規要求
+- 國際趨勢
+- 標竿企業做法
+
+請提供專業、具體、有實用價值的分析。"""
         
         headers = {
             "Content-Type": "application/json",
@@ -342,19 +366,26 @@ def analyze_industry():
         payload = {
             "model": "deepseek-chat",
             "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": "你是一位專業的碳管理顧問，擅長進行行業別排放分析。請提供結構化、詳細的分析報告。"},
                 {"role": "user", "content": prompt}
             ],
             "temperature": 0.7,
-            "max_tokens": 1500
+            "max_tokens": 2000,
+            "top_p": 0.95
         }
         
-        response = requests.post(DEEPSEEK_API_URL, headers=headers, json=payload, timeout=45)
+        logger.info(f"發送行業分析請求: {industry}")
+        response = requests.post(
+            DEEPSEEK_API_URL,
+            headers=headers,
+            json=payload,
+            timeout=45
+        )
         
         if response.status_code == 200:
             result = response.json()
             return jsonify({
-                'analysis': result['choices'][0]['message']['content'],
+                'reply': result['choices'][0]['message']['content'],
                 'timestamp': datetime.now().isoformat()
             })
         else:
@@ -362,6 +393,107 @@ def analyze_industry():
         
     except Exception as e:
         logger.error(f"行業分析錯誤: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# ========== 排放計算功能 (模式3) ==========
+@app.route('/api/calculate-emission', methods=['POST'])
+def calculate_emission():
+    """🧮 排放計算 - 協助使用者計算具體的碳排放量"""
+    logger.info("收到 /api/calculate-emission 請求")
+    
+    try:
+        data = request.json
+        emission_source = data.get('emission_source', '')
+        activity_data = data.get('activity_data', {})
+        
+        # 如果 activity_data 是空的，但 emission_source 有值，嘗試解析
+        if not activity_data and emission_source:
+            # 嘗試從文字中解析數值
+            import re
+            numbers = re.findall(r'\d+\.?\d*', emission_source)
+            units = re.findall(r'(度|kWh|立方公尺|公升|L|kg|噸|公里|km)', emission_source)
+            
+            activity_data = {
+                'description': emission_source,
+                'detected_numbers': numbers,
+                'detected_units': units
+            }
+        
+        if not emission_source:
+            return jsonify({'error': '請提供排放源和活動數據'}), 400
+        
+        if not DEEPSEEK_API_KEY:
+            return jsonify({'error': 'DeepSeek API Key 未設定'}), 500
+        
+        prompt = f"""請協助計算下列活動數據的溫室氣體排放量：
+
+排放源描述：{emission_source}
+活動數據：{json.dumps(activity_data, ensure_ascii=False, indent=2)}
+
+請按照以下格式提供計算結果：
+
+【排放源識別】
+- 排放源類型：______
+- 範疇歸屬：______
+- 類別歸屬：______
+
+【適用排放係數】
+- 係數值：______
+- 係數來源：______
+- 資料年份：______
+- 參考文獻：______
+
+【計算過程】
+- 計算公式：______
+- 代入數值：______
+- 計算結果：______ kg CO2e
+
+【數據品質評估】
+- 活動數據等級：______ (高/中/低)
+- 係數數據等級：______ (高/中/低)
+- 整體不確定性：______
+
+【減量建議】
+- 如何降低此排放源
+- 替代方案或改善措施
+
+如果活動數據不足，請說明需要收集哪些數據，並提供估算方法。"""
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {DEEPSEEK_API_KEY}"
+        }
+        
+        payload = {
+            "model": "deepseek-chat",
+            "messages": [
+                {"role": "system", "content": "你是一位碳排放計算專家，擅長根據活動數據計算排放量。請提供精確的計算過程和結果。"},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.3,  # 計算需要精確，降低溫度
+            "max_tokens": 1500,
+            "top_p": 0.95
+        }
+        
+        logger.info(f"發送排放計算請求: {emission_source[:50]}...")
+        response = requests.post(
+            DEEPSEEK_API_URL,
+            headers=headers,
+            json=payload,
+            timeout=45
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            return jsonify({
+                'reply': result['choices'][0]['message']['content'],
+                'timestamp': datetime.now().isoformat()
+            })
+        else:
+            return jsonify({'error': f'API 錯誤: {response.status_code}'}), 502
+        
+    except Exception as e:
+        logger.error(f"排放計算錯誤: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
