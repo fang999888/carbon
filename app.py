@@ -71,7 +71,6 @@ def health():
         'timestamp': datetime.now().isoformat()
     })
 
-# ===== 新增的連線測試端點 =====
 @app.route('/api/test-connection')
 def test_connection():
     """測試對 DeepSeek 的連線"""
@@ -164,44 +163,24 @@ def test_connection():
         'connection_tests': results,
         'timestamp': datetime.now().isoformat()
     })
-# ===== 新增端點結束 =====
 
+# ===== 簡化版的 chat 函數 =====
 @app.route('/api/chat', methods=['POST'])
 def chat():
-    """處理聊天請求"""
+    """簡化版聊天請求"""
     logger.info("收到 /api/chat 請求")
     
     try:
-        # 取得請求資料
         data = request.json
-        logger.info(f"請求資料: {data}")
-        
         user_message = data.get('message', '')
-        conversation_history = data.get('history', [])
         
         if not user_message:
-            logger.warning("請求中沒有訊息")
             return jsonify({'error': '請輸入訊息'}), 400
         
-        # 檢查 API Key
         if not DEEPSEEK_API_KEY:
-            logger.error("DeepSeek API Key 未設定")
-            return jsonify({'error': 'DeepSeek API Key 未設定'}), 500
+            return jsonify({'error': 'API Key 未設定'}), 500
         
-        # 準備 messages
-        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-        
-        # 加入對話歷史
-        for msg in conversation_history[-5:]:
-            if msg.get('role') in ['user', 'assistant']:
-                messages.append({"role": msg['role'], "content": msg['content']})
-        
-        # 加入當前訊息
-        messages.append({"role": "user", "content": user_message})
-        
-        logger.info(f"準備發送請求到 DeepSeek，messages 數量: {len(messages)}")
-        
-        # 準備 API 請求
+        # 極簡版請求
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {DEEPSEEK_API_KEY}"
@@ -209,16 +188,14 @@ def chat():
         
         payload = {
             "model": "deepseek-chat",
-            "messages": messages,
+            "messages": [
+                {"role": "user", "content": user_message}
+            ],
             "temperature": 0.7,
-            "max_tokens": 2000,
-            "top_p": 0.95,
-            "frequency_penalty": 0,
-            "presence_penalty": 0
+            "max_tokens": 1000
         }
         
-        # 發送請求到 DeepSeek
-        logger.info("發送請求至 DeepSeek API")
+        logger.info("發送簡化請求至 DeepSeek")
         response = requests.post(
             DEEPSEEK_API_URL,
             headers=headers,
@@ -226,40 +203,23 @@ def chat():
             timeout=30
         )
         
-        logger.info(f"DeepSeek API 回應狀態碼: {response.status_code}")
-        
         if response.status_code == 200:
             result = response.json()
-            logger.info("成功取得 DeepSeek 回應")
-            
-            bot_reply = result['choices'][0]['message']['content']
-            
             return jsonify({
-                'reply': bot_reply,
+                'reply': result['choices'][0]['message']['content'],
                 'timestamp': datetime.now().isoformat()
             })
         else:
-            logger.error(f"DeepSeek API 錯誤: {response.status_code} - {response.text}")
+            logger.error(f"DeepSeek API 錯誤: {response.status_code}")
             return jsonify({
-                'error': f'DeepSeek API 錯誤: {response.status_code}',
+                'error': f'API 錯誤: {response.status_code}',
                 'detail': response.text[:200]
             }), 500
-        
-    except requests.exceptions.Timeout:
-        logger.error("API 請求超時")
-        return jsonify({'error': 'API 請求超時，請稍後再試'}), 504
-    except requests.exceptions.ConnectionError as e:
-        logger.error(f"API 連線錯誤: {str(e)}")
-        logger.error(f"錯誤類型: {type(e).__name__}")
-        return jsonify({
-            'error': '無法連線到 DeepSeek API',
-            'detail': str(e),
-            'type': type(e).__name__
-        }), 503
+            
     except Exception as e:
-        logger.error(f"伺服器錯誤: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({'error': f'系統錯誤: {str(e)}'}), 500
+        logger.error(f"錯誤: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+# ===== 簡化版結束 =====
 
 @app.route('/api/analyze-industry', methods=['POST'])
 def analyze_industry():
