@@ -95,6 +95,62 @@ def health():
         'timestamp': datetime.now().isoformat()
     })
 
+@app.route('/api/test-deepseek')
+def test_deepseek():
+    """測試 DeepSeek API 連接"""
+    logger.info("收到 /api/test-deepseek 請求")
+    
+    try:
+        if not DEEPSEEK_API_KEY:
+            return jsonify({"error": "API Key 未設定"}), 500
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {DEEPSEEK_API_KEY}"
+        }
+        
+        test_payload = {
+            "model": "deepseek-chat",
+            "messages": [{"role": "user", "content": "Hello"}],
+            "max_tokens": 10
+        }
+        
+        response = requests.post(
+            DEEPSEEK_API_URL,
+            headers=headers,
+            json=test_payload,
+            timeout=10
+        )
+        
+        return jsonify({
+            "status": "API Key 已設定",
+            "api_test_ok": response.status_code == 200,
+            "api_test_status": response.status_code
+        })
+        
+    except Exception as e:
+        return jsonify({"status": "測試失敗", "error": str(e)}), 500
+
+@app.route('/api/debug-env')
+def debug_env():
+    """除錯：查看環境變數"""
+    safe_env = {}
+    for key in os.environ:
+        if 'KEY' in key or 'SECRET' in key or 'PASSWORD' in key:
+            if os.environ[key]:
+                safe_env[key] = os.environ[key][:10] + '...'
+            else:
+                safe_env[key] = None
+        else:
+            safe_env[key] = os.environ[key]
+    
+    return jsonify({
+        "env_vars": safe_env,
+        "has_env_file": os.path.exists('.env'),
+        "files": os.listdir('.')
+    })
+
+# ========== 一般聊天功能 ==========
 @app.route('/api/chat', methods=['POST'])
 def chat():
     """一般聊天功能"""
@@ -152,6 +208,7 @@ def chat():
         logger.error(f"錯誤: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+# ========== 新增：行業排放源查詢功能（獨立端點）==========
 @app.route('/api/industry-emissions', methods=['POST'])
 def industry_emissions():
     """行業別排放源查詢 - 讓使用者輸入行業別和排放源，BOT確認範疇和係數"""
@@ -162,6 +219,8 @@ def industry_emissions():
         industry = data.get('industry', '')
         emission_source = data.get('emission_source', '')
         
+        logger.info(f"行業排放查詢: {industry} - {emission_source}")
+        
         if not industry or not emission_source:
             return jsonify({'error': '請提供行業別和排放源'}), 400
         
@@ -169,16 +228,15 @@ def industry_emissions():
             return jsonify({'error': 'API Key 未設定'}), 500
         
         # 專門用於行業排放查詢的提示詞
-        query_prompt = f"""請針對以下資訊提供碳盤查專業建議：
+        query_prompt = f"""請針對以下資訊提供碳盤查專業建議，要非常具體實用：
 
 行業別：{industry}
 排放源：{emission_source}
 
-請按照以下格式回答，要非常具體實用：
+請按照以下格式回答：
 
 【範疇分類】
 - 範疇：______ (請說明是範疇一/二/三，以及原因)
-- 說明：為什麼這個排放源屬於這個範疇
 
 【類別歸屬 (ISO 14064-1)】
 - 類別：______ (類別1-6)
@@ -188,22 +246,17 @@ def industry_emissions():
 - 建議係數值：______ (請給出具體數值，例如: 0.495 kg CO2e/度)
 - 係數來源：______ (IPCC/環保署/IEA/DEFRA/Ecoinvent/其他)
 - 單位：______
-- 資料年份：______ (如果知道的話)
 
 【計算公式】
 - 公式：______
-- 活動數據需求：______ (需要收集哪些數據)
-- 計算範例：______ (舉一個簡單例子)
-
-【數據品質要求】
-- 建議數據等級：______ (初級/次級數據)
-- 不確定性說明：______
+- 活動數據需求：______
+- 計算範例：______
 
 【實務建議】
 - 常見問題：______
-- 改善建議：______
+- 注意事項：______
 
-請確保回答非常具體實用，尤其是排放係數值要盡可能精確。"""
+請確保回答非常具體實用，包含實際的係數數值。"""
         
         headers = {
             "Content-Type": "application/json",
@@ -213,38 +266,46 @@ def industry_emissions():
         payload = {
             "model": "deepseek-chat",
             "messages": [
-                {"role": "system", "content": "你是一位實用型碳管理顧問，專注於提供具體的排放係數和計算方式。回答要非常具體，包含實際的數值，不要只是籠統的說明。"},
+                {"role": "system", "content": "你是一位實用型碳管理顧問，專注於提供具體的排放係數和計算方式。回答要包含實際的數值，不要只是籠統的說明。"},
                 {"role": "user", "content": query_prompt}
             ],
-            "temperature": 0.3,  # 降低溫度讓回答更精確
-            "max_tokens": 1200,
+            "temperature": 0.3,
+            "max_tokens": 1000,
             "top_p": 0.95
         }
         
-        logger.info(f"發送行業排放查詢請求: {industry} - {emission_source}")
+        logger.info("發送行業排放查詢請求至 DeepSeek")
         response = requests.post(
             DEEPSEEK_API_URL,
             headers=headers,
             json=payload,
-            timeout=45
+            timeout=30
         )
         
         if response.status_code == 200:
             result = response.json()
+            reply_content = result['choices'][0]['message']['content']
+            logger.info("成功取得行業排放查詢回應")
+            
             return jsonify({
-                'reply': result['choices'][0]['message']['content'],
+                'reply': reply_content,
                 'industry': industry,
                 'emission_source': emission_source,
                 'timestamp': datetime.now().isoformat()
             })
         else:
-            logger.error(f"API錯誤: {response.status_code}")
+            logger.error(f"DeepSeek API 錯誤: {response.status_code}")
             return jsonify({'error': f'查詢失敗: {response.status_code}'}), 502
             
+    except requests.exceptions.Timeout:
+        logger.error("API 請求超時")
+        return jsonify({'error': '請求超時，請稍後再試'}), 504
     except Exception as e:
         logger.error(f"行業排放查詢錯誤: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
+# ========== 行業分析功能 ==========
 @app.route('/api/analyze-industry', methods=['POST'])
 def analyze_industry():
     """分析行業別的整體排放概況"""
@@ -302,61 +363,6 @@ def analyze_industry():
     except Exception as e:
         logger.error(f"行業分析錯誤: {str(e)}")
         return jsonify({'error': str(e)}), 500
-
-@app.route('/api/test-deepseek')
-def test_deepseek():
-    """測試 DeepSeek API 連接"""
-    logger.info("收到 /api/test-deepseek 請求")
-    
-    try:
-        if not DEEPSEEK_API_KEY:
-            return jsonify({"error": "API Key 未設定"}), 500
-        
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {DEEPSEEK_API_KEY}"
-        }
-        
-        test_payload = {
-            "model": "deepseek-chat",
-            "messages": [{"role": "user", "content": "Hello"}],
-            "max_tokens": 10
-        }
-        
-        response = requests.post(
-            DEEPSEEK_API_URL,
-            headers=headers,
-            json=test_payload,
-            timeout=10
-        )
-        
-        return jsonify({
-            "status": "API Key 已設定",
-            "api_test_ok": response.status_code == 200,
-            "api_test_status": response.status_code
-        })
-        
-    except Exception as e:
-        return jsonify({"status": "測試失敗", "error": str(e)}), 500
-
-@app.route('/api/debug-env')
-def debug_env():
-    """除錯：查看環境變數"""
-    safe_env = {}
-    for key in os.environ:
-        if 'KEY' in key or 'SECRET' in key or 'PASSWORD' in key:
-            if os.environ[key]:
-                safe_env[key] = os.environ[key][:10] + '...'
-            else:
-                safe_env[key] = None
-        else:
-            safe_env[key] = os.environ[key]
-    
-    return jsonify({
-        "env_vars": safe_env,
-        "has_env_file": os.path.exists('.env'),
-        "files": os.listdir('.')
-    })
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
