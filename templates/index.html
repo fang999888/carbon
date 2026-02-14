@@ -22,7 +22,7 @@
         }
 
         .chat-container {
-            max-width: 1000px;
+            max-width: 1200px;
             width: 100%;
             background-color: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(12px);
@@ -90,7 +90,7 @@
         .conversation {
             background: #f9fff9;
             padding: 2rem 2rem 1.5rem 2rem;
-            max-height: 380px;
+            max-height: 400px;
             overflow-y: auto;
             scroll-behavior: smooth;
             border-bottom: 2px dashed #c0ddbc;
@@ -172,6 +172,64 @@
             color: white;
         }
 
+        /* 新增：行業排放查詢區塊 */
+        .emission-query-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f0f7f0;
+            border-radius: 20px;
+            border: 2px solid #9bc0a2;
+        }
+
+        .emission-query-section h3 {
+            color: #1d4e3d;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .query-input-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .query-input-group input {
+            flex: 2;
+            padding: 12px;
+            border-radius: 30px;
+            border: 2px solid #9bc0a2;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .query-input-group input:focus {
+            border-color: #2f5e4e;
+        }
+
+        .query-btn {
+            flex: 1;
+            padding: 12px 20px;
+            background: #2f5e4e;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: 0.2s;
+        }
+
+        .query-btn:hover {
+            background: #1d4e3d;
+            transform: translateY(-2px);
+        }
+
+        .example-hint {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #457a66;
+        }
+
         .section-title {
             font-size: 1.2rem;
             font-weight: 500;
@@ -225,16 +283,6 @@
             padding: 1.5rem 1.8rem;
             margin-top: 1.2rem;
             border: 1px solid #b1cfb1;
-        }
-
-        .faq-title {
-            font-weight: 500;
-            color: #204e34;
-            margin-bottom: 1.2rem;
-            font-size: 1.1rem;
-            display: flex;
-            gap: 10px;
-            align-items: center;
         }
 
         .faq-bubbles {
@@ -324,21 +372,6 @@
             letter-spacing: 0.3px;
             border-top: 1px solid #aac8aa;
         }
-
-        .icon-leaf {
-            display: inline-block;
-            font-size: 1.2rem;
-            filter: drop-shadow(0 2px 2px #559966);
-        }
-
-        .deploy-hint {
-            background: #286b4e20;
-            border-radius: 20px;
-            padding: 0.2rem 1.2rem;
-            color: #2a5e45;
-            font-size: 0.85rem;
-            border: 1px dashed #457a60;
-        }
     </style>
 </head>
 <body>
@@ -350,7 +383,7 @@
         </h1>
         <div class="badge-container">
             <div class="badge">📊 20年經驗 · 永續專家</div>
-            <div class="badge deploy-hint">⚡ ISO 14064-1/14067</div>
+            <div class="badge">⚡ ISO 14064-1/14067</div>
         </div>
     </div>
 
@@ -364,7 +397,11 @@
                     • ISO 14067 產品碳足跡（Cradle-to-Gate/Grave）<br>
                     • 排放係數資料庫（IPCC/IEA/環保署/Ecoinvent）<br>
                     • 工業製程分析與節能診斷<br><br>
-                    請告訴我您的企業概況、生產流程或任何碳管理問題，我將以顧問身份為您診斷。
+                    <strong>🔍 新增功能：行業排放源即時查詢</strong><br>
+                    您可以在下方輸入「行業別」和「排放源」，我會告訴您：
+                    • 屬於哪個範疇/類別<br>
+                    • 建議的排放係數（含具體數值）<br>
+                    • 計算公式和注意事項
                 </div>
                 <div class="timestamp">專家 現在</div>
             </div>
@@ -377,8 +414,21 @@
                 <button class="mode-btn" data-mode="calculation">🧮 排放計算</button>
             </div>
 
+            <!-- 新增：行業排放源快速查詢 -->
+            <div class="emission-query-section">
+                <h3>🔍 行業排放源即時查詢（含具體係數）</h3>
+                <div class="query-input-group">
+                    <input type="text" id="industryInput" placeholder="輸入行業別 (例如: 鋼鐵業、食品業、電子業)">
+                    <input type="text" id="sourceInput" placeholder="輸入排放源 (例如: 鍋爐、冷媒、用電)">
+                    <button class="query-btn" id="queryEmissionsBtn">查詢係數</button>
+                </div>
+                <div class="example-hint">
+                    💡 範例: 「鋼鐵業 - 電弧爐」 | 「食品業 - 天然氣鍋爐」 | 「電子業 - 冷媒R134a」 | 「紡織業 - 用電」
+                </div>
+            </div>
+
             <div class="section-title">
-                <span class="icon-leaf">📋</span> 專家諮詢主題
+                <span>📋</span> 專家諮詢主題
             </div>
             <div class="coefficient-grid" id="expertTopics">
                 <div class="coef-card" data-question="請說明ISO 14064-1的類別1-6如何界定？">
@@ -400,9 +450,6 @@
             </div>
 
             <div class="faq-section">
-                <div class="faq-title">
-                    <span>🔧 製程與設備診斷</span>
-                </div>
                 <div class="faq-bubbles" id="processFaq">
                     <span class="faq-item" data-question="鍋爐的排放源有哪些？如何計算？">鍋爐排放計算</span>
                     <span class="faq-item" data-question="空壓機系統如何進行節能診斷？">空壓機節能</span>
@@ -432,6 +479,11 @@
     const modeBtns = document.querySelectorAll('.mode-btn');
     const expertTopics = document.querySelectorAll('.coef-card');
     const processFaq = document.querySelectorAll('.faq-item');
+    
+    // 新增：行業排放查詢元素
+    const industryInput = document.getElementById('industryInput');
+    const sourceInput = document.getElementById('sourceInput');
+    const queryBtn = document.getElementById('queryEmissionsBtn');
 
     let currentMode = 'general';
     let conversationHistory = [];
@@ -439,12 +491,11 @@
     // 頁面載入時測試 API 連線
     window.addEventListener('load', async () => {
         try {
-            console.log('正在測試 API 連線...');
             const response = await fetch('/api/health');
             const data = await response.json();
-            console.log('✅ API 連線成功:', data);
+            console.log('API 連線成功:', data);
         } catch (error) {
-            console.error('❌ API 連線失敗:', error);
+            console.error('API 連線失敗:', error);
         }
     });
 
@@ -487,7 +538,6 @@
         addMessage('user', message);
         userInput.value = '';
 
-        // 顯示載入中
         const loadingId = 'loading-' + Date.now();
         const loadingDiv = document.createElement('div');
         loadingDiv.classList.add('message', 'bot');
@@ -496,54 +546,98 @@
         conversationDiv.appendChild(loadingDiv);
 
         try {
-            console.log('發送請求到 /api/chat, 訊息:', message);
+            let apiUrl = '/api/chat';
+            let payload = { message, history: conversationHistory.slice(-10) };
             
-            const response = await fetch('/api/chat', {
+            if (currentMode === 'industry') {
+                apiUrl = '/api/analyze-industry';
+                payload = { industry: message, process_description: '' };
+            } else if (currentMode === 'calculation') {
+                apiUrl = '/api/calculate-emission';
+                payload = { emission_source: '一般排放源', activity_data: { description: message } };
+            }
+
+            const response = await fetch(apiUrl, {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({ 
-                    message: message, 
-                    history: conversationHistory.slice(-10) 
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
             });
             
-            console.log('回應狀態碼:', response.status);
-            
-            // 移除載入中
             const loading = document.getElementById(loadingId);
             if (loading) loading.remove();
 
             if (response.ok) {
                 const data = await response.json();
-                console.log('回應資料:', data);
-                
-                if (data.reply) {
-                    addMessage('assistant', data.reply);
+                const reply = data.reply || data.analysis || data.calculation;
+                if (reply) {
+                    addMessage('assistant', reply);
                 } else {
                     addMessage('assistant', '抱歉，無法取得回應');
                 }
             } else {
-                const errorText = await response.text();
-                console.error('API 錯誤:', response.status, errorText);
                 addMessage('assistant', `⚠️ 錯誤 (${response.status})：無法連接到專家系統`);
             }
         } catch (error) {
-            console.error('發送失敗:', error);
             const loading = document.getElementById(loadingId);
             if (loading) loading.remove();
-            addMessage('assistant', '⚠️ 連線錯誤，請檢查網路並重新整理頁面');
+            addMessage('assistant', '⚠️ 連線錯誤，請稍後再試');
         }
     }
+
+    // 新增：行業排放源查詢功能
+    queryBtn.addEventListener('click', async () => {
+        const industry = industryInput.value.trim();
+        const source = sourceInput.value.trim();
+        
+        if (!industry || !source) {
+            alert('請輸入行業別和排放源');
+            return;
+        }
+        
+        const message = `【行業排放查詢】\n行業別：${industry}\n排放源：${source}`;
+        addMessage('user', message);
+        
+        industryInput.value = '';
+        sourceInput.value = '';
+        
+        const loadingId = 'loading-' + Date.now();
+        const loadingDiv = document.createElement('div');
+        loadingDiv.classList.add('message', 'bot');
+        loadingDiv.id = loadingId;
+        loadingDiv.innerHTML = '<div class="bubble">⏳ 查詢排放係數中...</div>';
+        conversationDiv.appendChild(loadingDiv);
+        
+        try {
+            const response = await fetch('/api/industry-emissions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    industry: industry,
+                    emission_source: source
+                })
+            });
+            
+            const loading = document.getElementById(loadingId);
+            if (loading) loading.remove();
+            
+            if (response.ok) {
+                const data = await response.json();
+                addMessage('assistant', data.reply);
+            } else {
+                addMessage('assistant', '⚠️ 查詢失敗，請稍後再試');
+            }
+        } catch (error) {
+            const loading = document.getElementById(loadingId);
+            if (loading) loading.remove();
+            addMessage('assistant', '⚠️ 連線錯誤');
+        }
+    });
 
     sendBtn.addEventListener('click', sendMessage);
     userInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') sendMessage();
     });
 
-    // 綁定快速提問
     expertTopics.forEach(card => {
         card.addEventListener('click', () => {
             const question = card.dataset.question;
