@@ -1,122 +1,859 @@
-// DOM 元素 - 模式輸入
-const generalInput = document.getElementById('generalInput');
-const generalSendBtn = document.getElementById('generalSendBtn');
-const industryName = document.getElementById('industryName');
-const industryProcess = document.getElementById('industryProcess');
-const industrySendBtn = document.getElementById('industrySendBtn');
-const sourceDesc = document.getElementById('sourceDesc');
-const activityData = document.getElementById('activityData');
-const calculationSendBtn = document.getElementById('calculationSendBtn');
-
-// 模式切換功能
-modeBtns.forEach(btn => {
-    btn.addEventListener('click', function() {
-        // 移除所有 active 類別
-        modeBtns.forEach(b => b.classList.remove('active'));
-        modeInputSections.forEach(s => s.classList.remove('active-mode'));
-        
-        // 為當前按鈕加上 active 類別
-        this.classList.add('active');
-        
-        // 顯示對應的輸入區塊
-        const mode = this.dataset.mode;
-        if (mode === 'general') {
-            document.getElementById('general-input').classList.add('active-mode');
-        } else if (mode === 'industry') {
-            document.getElementById('industry-input').classList.add('active-mode');
-        } else if (mode === 'calculation') {
-            document.getElementById('calculation-input').classList.add('active-mode');
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>蕨積碳盤查顧問</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
         }
-    });
-});
 
-// 一般諮詢發送
-generalSendBtn.addEventListener('click', async () => {
-    const message = generalInput.value.trim();
-    if (!message) return;
-    
-    addMessage('user', message);
-    generalInput.value = '';
-    await processMessage('/api/chat', { message, history: conversationHistory.slice(-10) });
-});
+        body {
+            background: linear-gradient(145deg, #e8f4e5 0%, #d1e9d0 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
 
-// 行業分析發送
-industrySendBtn.addEventListener('click', async () => {
-    const industry = industryName.value.trim();
-    if (!industry) {
-        alert('請輸入行業名稱');
-        return;
-    }
-    
-    const process = industryProcess.value.trim();
-    const message = `【行業分析】${industry}${process ? ' - ' + process : ''}`;
-    addMessage('user', message);
-    
-    industryName.value = '';
-    industryProcess.value = '';
-    
-    await processMessage('/api/analyze-industry', { 
-        industry: industry, 
-        process_description: process 
-    });
-});
+        .chat-container {
+            max-width: 1200px;
+            width: 100%;
+            background-color: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 42px 42px 36px 36px;
+            box-shadow: 0 20px 40px -8px rgba(40, 70, 40, 0.4),
+                        0 0 0 1px rgba(120, 150, 120, 0.2) inset;
+            overflow: hidden;
+        }
 
-// 排放計算發送
-calculationSendBtn.addEventListener('click', async () => {
-    const source = sourceDesc.value.trim();
-    const data = activityData.value.trim();
-    
-    if (!source || !data) {
-        alert('請輸入排放源描述和活動數據');
-        return;
-    }
-    
-    const message = `【排放計算】${source} - ${data}`;
-    addMessage('user', message);
-    
-    sourceDesc.value = '';
-    activityData.value = '';
-    
-    await processMessage('/api/calculate-emission', { 
-        emission_source: `${source} ${data}`,
-        activity_data: { description: `${source} ${data}` }
-    });
-});
+        .header {
+            background: #2f5e4e;
+            color: white;
+            padding: 1.4rem 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+            border-bottom: 4px solid #afcbac;
+        }
 
-// 統一的訊息處理函數
-async function processMessage(apiUrl, payload) {
-    const loadingId = 'loading-' + Date.now();
-    const loadingDiv = document.createElement('div');
-    loadingDiv.classList.add('message', 'bot');
-    loadingDiv.id = loadingId;
-    loadingDiv.innerHTML = '<div class="bubble">⏳ 專家思考中...</div>';
-    conversationDiv.appendChild(loadingDiv);
+        .header h1 {
+            font-weight: 500;
+            font-size: 1.8rem;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
 
-    try {
-        console.log('發送請求到:', apiUrl, payload);
-        
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify(payload)
-        });
-        
-        const loading = document.getElementById(loadingId);
-        if (loading) loading.remove();
+        .header h1 span {
+            background: #b7d7b0;
+            color: #1c3b2f;
+            font-size: 1rem;
+            padding: 0.2rem 1rem;
+            border-radius: 40px;
+            font-weight: 400;
+            margin-left: 0.5rem;
+        }
 
-        if (response.ok) {
+        .badge-container {
+            margin-left: auto;
+            display: flex;
+            gap: 12px;
+        }
+
+        .badge {
+            background: #457a66;
+            padding: 0.4rem 1rem;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            font-weight: 400;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            border: 1px solid #9bc0a2;
+            color: #f5fdee;
+        }
+
+        .chat-area {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .conversation {
+            background: #f9fff9;
+            padding: 2rem 2rem 1.5rem 2rem;
+            max-height: 400px;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+            border-bottom: 2px dashed #c0ddbc;
+        }
+
+        .message {
+            display: flex;
+            margin-bottom: 1.4rem;
+            align-items: flex-end;
+        }
+
+        .message.bot {
+            justify-content: flex-start;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .bubble {
+            max-width: 75%;
+            padding: 0.9rem 1.5rem;
+            border-radius: 28px 28px 8px 28px;
+            font-size: 1rem;
+            line-height: 1.5;
+            box-shadow: 0 4px 8px rgba(0, 20, 0, 0.04);
+            word-break: break-word;
+            white-space: pre-wrap;
+        }
+
+        .bot .bubble {
+            background: #e1f0dd;
+            border-radius: 8px 28px 28px 28px;
+            color: #1f3b2c;
+            border: 1px solid #bcdbb6;
+        }
+
+        .user .bubble {
+            background: #30755b;
+            color: white;
+            border-radius: 28px 8px 28px 28px;
+            border: 1px solid #1d543f;
+        }
+
+        .timestamp {
+            font-size: 0.65rem;
+            color: #748d74;
+            margin: 0 0.5rem 0.3rem 0.5rem;
+        }
+
+        .query-panel {
+            padding: 1.8rem 2rem 2rem 2rem;
+            background: #ffffffd9;
+            backdrop-filter: blur(4px);
+        }
+
+        .mode-switch {
+            display: flex;
+            gap: 10px;
+            margin: 0 0 20px 0;
+            padding: 10px;
+            background: #e8f4e5;
+            border-radius: 40px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 30px;
+            background: transparent;
+            cursor: pointer;
+            font-weight: 500;
+            transition: 0.2s;
+            font-size: 1rem;
+        }
+
+        .mode-btn.active {
+            background: #2f5e4e;
+            color: white;
+        }
+
+        /* 模式輸入區塊樣式 */
+        #mode-input-container {
+            margin: 20px 0;
+            min-height: 140px;
+        }
+
+        .mode-input-section {
+            display: none;
+            padding: 20px;
+            background: #f0f7f0;
+            border-radius: 20px;
+            border: 2px solid #9bc0a2;
+        }
+
+        .mode-input-section.active-mode {
+            display: block;
+        }
+
+        .mode-send-btn {
+            padding: 12px 25px;
+            background: #2f5e4e;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: 0.2s;
+            white-space: nowrap;
+        }
+
+        .mode-send-btn:hover {
+            background: #1d4e3d;
+            transform: translateY(-2px);
+        }
+
+        /* 行業排放查詢區塊 */
+        .emission-query-section {
+            margin: 20px 0 30px 0;
+            padding: 20px;
+            background: #e8f2e8;
+            border-radius: 20px;
+            border: 2px solid #2f5e4e;
+        }
+
+        .emission-query-section h3 {
+            color: #1d4e3d;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .query-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .query-row {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .query-input-group input {
+            flex: 1;
+            padding: 12px;
+            border-radius: 30px;
+            border: 2px solid #9bc0a2;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .query-input-group input:focus {
+            border-color: #2f5e4e;
+        }
+
+        .query-btn {
+            padding: 12px 20px;
+            background: #2f5e4e;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: 0.2s;
+        }
+
+        .query-btn:hover {
+            background: #1d4e3d;
+            transform: translateY(-2px);
+        }
+
+        .example-hint {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #457a66;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: #1d4e3d;
+            margin-bottom: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .coefficient-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .coef-card {
+            background: #f0f9ef;
+            padding: 1.2rem 1rem;
+            border-radius: 26px;
+            border: 1px solid #bcd9b2;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 2px 6px rgba(100, 130, 100, 0.1);
+        }
+
+        .coef-card:hover {
+            background: #dff2db;
+            border-color: #609f6b;
+            transform: translateY(-4px);
+            box-shadow: 0 16px 20px -12px #6f9e7a;
+        }
+
+        .coef-card h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1f573f;
+            margin-bottom: 0.3rem;
+        }
+
+        .coef-card p {
+            font-size: 0.85rem;
+            color: #3b5b48;
+            opacity: 0.9;
+        }
+
+        .faq-section {
+            background: #eaf6e9;
+            border-radius: 32px;
+            padding: 1.5rem 1.8rem;
+            margin-top: 1.2rem;
+            border: 1px solid #b1cfb1;
+        }
+
+        .faq-bubbles {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.7rem;
+        }
+
+        .faq-item {
+            background: white;
+            border: 1px solid #9fc0a2;
+            color: #1b4a32;
+            padding: 0.6rem 1.4rem;
+            border-radius: 40px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.15s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .faq-item:hover {
+            background: #31755b;
+            color: white;
+            border-color: #246b4a;
+            box-shadow: 0 8px 14px -8px #2d6b4c;
+        }
+
+        .input-area {
+            display: flex;
+            padding: 1.3rem 2rem 1.8rem 2rem;
+            background: #e2f0df;
+            gap: 0.8rem;
+            align-items: center;
+            border-top: 2px solid #b7d7b2;
+        }
+
+        .input-area input {
+            flex: 1;
+            padding: 1rem 1.5rem;
+            border: none;
+            border-radius: 40px;
+            background: white;
+            font-size: 1rem;
+            outline: 2px solid transparent;
+            transition: 0.2s;
+            box-shadow: 0 2px 8px rgba(70, 100, 70, 0.1);
+        }
+
+        .input-area input:focus {
+            outline: 2px solid #538e70;
+            background-color: #f6fff0;
+        }
+
+        .send-btn {
+            background: #1f604a;
+            color: white;
+            border: none;
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            font-size: 1.6rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: 0.15s;
+            box-shadow: 0 4px 8px #467a5e;
+            line-height: 1;
+        }
+
+        .send-btn:hover {
+            background: #124f3b;
+            transform: scale(1.04);
+        }
+
+        .send-btn:active {
+            transform: scale(0.97);
+        }
+
+        .footnote {
+            text-align: center;
+            padding: 0.8rem 1rem;
+            background: #cfe5cb;
+            color: #194433;
+            font-size: 0.8rem;
+            letter-spacing: 0.3px;
+            border-top: 1px solid #aac8aa;
+        }
+    </style>
+</head>
+<body>
+<div class="chat-container">
+    <div class="header">
+        <h1>
+            🌱 蕨積溫室氣體盤查顧問
+            <span>綠色生活驅動</span>
+        </h1>
+        <div class="badge-container">
+            <div class="badge">淨零碳排地球永續</div>
+            <div class="badge">⚡ ISO 14064-1/14067</div>
+        </div>
+    </div>
+
+    <div class="chat-area">
+        <div class="conversation" id="conversation">
+            <div class="message bot">
+                <div class="bubble">
+                    🌍 您好，我是您的溫室氣體盤查顧問，擁有25年以上的職場經驗。<br><br>
+                    <strong>專精領域：</strong><br>
+                    • ISO 14064-1 組織碳盤查（類別1-6）<br>
+                    • ISO 14067 產品碳足跡（Cradle-to-Gate/Grave）<br>
+                    • 排放係數資料庫（IPCC/IEA/環保署/Ecoinvent）<br>
+                    • 工業製程分析與節能診斷<br><br>
+                    <strong>🔍 三大模式：</strong><br>
+                    • 💬 一般諮詢 - 任何碳盤查問題<br>
+                    • 🏭 行業分析 - 輸入行業名稱，獲得完整分析<br>
+                    • 🧮 排放計算 - 輸入排放源和數據，幫您算碳排<br>
+                    • 🔍 行業排放查詢 - 輸入行業+製程+排放源，查具體係數
+                </div>
+                <div class="timestamp">顧問 現在</div>
+            </div>
+        </div>
+
+        <div class="query-panel">
+            <!-- 模式切換按鈕 -->
+            <div class="mode-switch">
+                <button class="mode-btn active" data-mode="general">💬 一般諮詢</button>
+                <button class="mode-btn" data-mode="industry">🏭 行業分析</button>
+                <button class="mode-btn" data-mode="calculation">🧮 排放計算</button>
+            </div>
+
+            <!-- 根據模式顯示不同的輸入介面 -->
+            <div id="mode-input-container">
+                <!-- 一般諮詢模式輸入區 -->
+                <div id="general-input" class="mode-input-section active-mode">
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="text" id="generalInput" placeholder="例如：什麼是範疇一？ISO 14064-1的類別如何界定？" style="flex: 1; padding: 12px; border-radius: 30px; border: 2px solid #9bc0a2; font-size: 1rem;">
+                        <button id="generalSendBtn" class="mode-send-btn">💬 發問</button>
+                    </div>
+                    <div style="margin-top: 8px; font-size: 0.9rem; color: #457a66;">
+                        💡 詢問任何碳盤查、碳足跡、ISO標準相關問題
+                    </div>
+                </div>
+
+                <!-- 行業分析模式輸入區 -->
+                <div id="industry-input" class="mode-input-section">
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <input type="text" id="industryName" placeholder="行業名稱 (例如：鋼鐵業、電子業、食品業)" style="flex: 1; padding: 12px; border-radius: 30px; border: 2px solid #9bc0a2; font-size: 1rem;">
+                        <input type="text" id="industryProcess" placeholder="製程描述 (選填，例如：電弧爐、印刷電路板)" style="flex: 1; padding: 12px; border-radius: 30px; border: 2px solid #9bc0a2; font-size: 1rem;">
+                        <button id="industrySendBtn" class="mode-send-btn">🏭 分析</button>
+                    </div>
+                    <div style="margin-top: 8px; font-size: 0.9rem; color: #457a66;">
+                        💡 輸入行業名稱，獲得完整的排放源分析報告
+                    </div>
+                </div>
+
+                <!-- 排放計算模式輸入區 -->
+                <div id="calculation-input" class="mode-input-section">
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <input type="text" id="sourceDesc" placeholder="排放源描述 (例如：天然氣鍋爐、柴油發電機)" style="flex: 1; padding: 12px; border-radius: 30px; border: 2px solid #9bc0a2; font-size: 1rem;">
+                        <input type="text" id="activityData" placeholder="活動數據 (例如：5000立方公尺、10000度)" style="flex: 1; padding: 12px; border-radius: 30px; border: 2px solid #9bc0a2; font-size: 1rem;">
+                        <button id="calculationSendBtn" class="mode-send-btn">🧮 計算</button>
+                    </div>
+                    <div style="margin-top: 8px; font-size: 0.9rem; color: #457a66;">
+                        💡 範例：排放源「天然氣鍋爐」、數據「5000立方公尺」
+                    </div>
+                </div>
+            </div>
+
+            <!-- 行業排放源即時查詢（含具體係數）- 加入製程欄位 -->
+            <div class="emission-query-section">
+                <h3>🔍 行業排放源即時查詢（含具體係數）</h3>
+                <div class="query-input-group">
+                    <div class="query-row">
+                        <input type="text" id="queryIndustry" placeholder="行業別 (例如: 鋼鐵業、食品業、電子業)">
+                        <input type="text" id="queryProcess" placeholder="製程/設備 (例如: 電弧爐、鍋爐、冷凍冷藏)">
+                    </div>
+                    <div class="query-row">
+                        <input type="text" id="querySource" placeholder="排放源 (例如: 用電、天然氣、冷媒R134a)">
+                        <button class="query-btn" id="queryEmissionsBtn">查詢係數</button>
+                    </div>
+                </div>
+                <div class="example-hint">
+                    <span>💡 範例1: 「鋼鐵業 - 電弧爐 - 用電」</span>
+                    <span>範例2: 「食品業 - 天然氣鍋爐 - 天然氣」</span>
+                    <span>範例3: 「電子業 - 無塵室 - 冷媒R134a」</span>
+                </div>
+            </div>
+
+            <!-- 專家諮詢主題卡片 -->
+            <div class="section-title">
+                <span>📋</span> 專家諮詢主題
+            </div>
+            <div class="coefficient-grid" id="expertTopics">
+                <div class="coef-card" data-question="請說明ISO 14064-1的類別1-6如何界定？">
+                    <h3>📌 類別界定</h3>
+                    <p>範疇一至三的排放源分類原則</p>
+                </div>
+                <div class="coef-card" data-question="組織邊界該用營運控制權法還是財務控制權法？">
+                    <h3>🔲 邊界設定</h3>
+                    <p>營運控制權 vs 財務控制權</p>
+                </div>
+                <div class="coef-card" data-question="產品碳足跡Cradle-to-Gate和Cradle-to-Grave的差異？">
+                    <h3>👣 系統邊界</h3>
+                    <p>搖籃到大門 vs 搖籃到墳墓</p>
+                </div>
+                <div class="coef-card" data-question="排放係數該如何選擇？IPCC、環保署、DEFRA的差異？">
+                    <h3>📊 係數選擇</h3>
+                    <p>資料庫比較與適用情境</p>
+                </div>
+            </div>
+
+            <!-- 製程診斷 FAQ -->
+            <div class="faq-section">
+                <div class="faq-bubbles" id="processFaq">
+                    <span class="faq-item" data-question="鍋爐的排放源有哪些？如何計算？">鍋爐排放計算</span>
+                    <span class="faq-item" data-question="空壓機系統如何進行節能診斷？">空壓機節能</span>
+                    <span class="faq-item" data-question="冰機/冷凍設備的冷媒逸散如何估算？">冷媒逸散估算</span>
+                    <span class="faq-item" data-question="如何進行產品碳足跡的熱點分析？">碳足跡熱點</span>
+                    <span class="faq-item" data-question="盤查報告書的數據品質要求？">數據品質等級</span>
+                    <span class="faq-item" data-question="CBAM對鋼鐵/鋁/水泥產業的影響？">CBAM因應</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 備用輸入區（保留但可隱藏，實際用上面的模式專用輸入） -->
+        <div class="input-area" style="display: none;">
+            <input type="text" id="userInput" placeholder="此處已由模式專用輸入取代" autocomplete="off">
+            <button class="send-btn" id="sendBtn">➤</button>
+        </div>
+        <div class="footnote">
+            ⚡ 由 DeepSeek AI 驅動 · 嚴格遵循 ISO 14064-1 與 ISO 14067 規範
+        </div>
+    </div>
+</div>
+
+<script>
+    // DOM 元素 - 模式輸入
+    const generalInput = document.getElementById('generalInput');
+    const generalSendBtn = document.getElementById('generalSendBtn');
+    const industryName = document.getElementById('industryName');
+    const industryProcess = document.getElementById('industryProcess');
+    const industrySendBtn = document.getElementById('industrySendBtn');
+    const sourceDesc = document.getElementById('sourceDesc');
+    const activityData = document.getElementById('activityData');
+    const calculationSendBtn = document.getElementById('calculationSendBtn');
+    
+    // 行業排放查詢元素
+    const queryIndustry = document.getElementById('queryIndustry');
+    const queryProcess = document.getElementById('queryProcess');
+    const querySource = document.getElementById('querySource');
+    const queryBtn = document.getElementById('queryEmissionsBtn');
+
+    const conversationDiv = document.getElementById('conversation');
+    const modeBtns = document.querySelectorAll('.mode-btn');
+    const modeInputSections = document.querySelectorAll('.mode-input-section');
+    const expertTopics = document.querySelectorAll('.coef-card');
+    const processFaq = document.querySelectorAll('.faq-item');
+
+    let conversationHistory = [];
+
+    // 頁面載入時測試 API 連線
+    window.addEventListener('load', async () => {
+        try {
+            const response = await fetch('/api/health');
             const data = await response.json();
-            const reply = data.reply || data.analysis || data.calculation || JSON.stringify(data);
-            addMessage('assistant', reply);
-        } else {
-            addMessage('assistant', `⚠️ 錯誤 (${response.status})：無法連接到專家系統`);
+            console.log('API 連線成功:', data);
+        } catch (error) {
+            console.error('API 連線失敗:', error);
+            addMessage('assistant', '⚠️ 無法連線到後端伺服器，請重新整理頁面');
         }
-    } catch (error) {
-        const loading = document.getElementById(loadingId);
-        if (loading) loading.remove();
-        addMessage('assistant', '⚠️ 連線錯誤，請稍後再試');
+    });
+
+    // 模式切換功能
+    modeBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            // 移除所有 active 類別
+            modeBtns.forEach(b => b.classList.remove('active'));
+            modeInputSections.forEach(s => s.classList.remove('active-mode'));
+            
+            // 為當前按鈕加上 active 類別
+            this.classList.add('active');
+            
+            // 顯示對應的輸入區塊
+            const mode = this.dataset.mode;
+            if (mode === 'general') {
+                document.getElementById('general-input').classList.add('active-mode');
+            } else if (mode === 'industry') {
+                document.getElementById('industry-input').classList.add('active-mode');
+            } else if (mode === 'calculation') {
+                document.getElementById('calculation-input').classList.add('active-mode');
+            }
+        });
+    });
+
+    function addMessage(role, content) {
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('message', role === 'user' ? 'user' : 'bot');
+        
+        const bubbleDiv = document.createElement('div');
+        bubbleDiv.classList.add('bubble');
+        bubbleDiv.innerText = content;
+        
+        const timestamp = document.createElement('div');
+        timestamp.classList.add('timestamp');
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+        timestamp.innerText = (role === 'user' ? '我' : '專家') + ' ' + timeStr;
+        
+        messageDiv.appendChild(bubbleDiv);
+        messageDiv.appendChild(timestamp);
+        conversationDiv.appendChild(messageDiv);
+        conversationDiv.scrollTop = conversationDiv.scrollHeight;
+        
+        if (role === 'user' || role === 'assistant') {
+            conversationHistory.push({ role, content });
+        }
     }
-}
+
+    // 統一的訊息處理函數
+    async function processMessage(apiUrl, payload) {
+        const loadingId = 'loading-' + Date.now();
+        const loadingDiv = document.createElement('div');
+        loadingDiv.classList.add('message', 'bot');
+        loadingDiv.id = loadingId;
+        loadingDiv.innerHTML = '<div class="bubble">⏳ 專家思考中...</div>';
+        conversationDiv.appendChild(loadingDiv);
+
+        try {
+            console.log('發送請求到:', apiUrl, payload);
+            
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+            
+            const loading = document.getElementById(loadingId);
+            if (loading) loading.remove();
+
+            if (response.ok) {
+                const data = await response.json();
+                const reply = data.reply || data.analysis || data.calculation || JSON.stringify(data);
+                addMessage('assistant', reply);
+            } else {
+                const errorText = await response.text();
+                console.error('API錯誤:', response.status, errorText);
+                addMessage('assistant', `⚠️ 錯誤 (${response.status})：無法連接到專家系統`);
+            }
+        } catch (error) {
+            console.error('發送失敗:', error);
+            const loading = document.getElementById(loadingId);
+            if (loading) loading.remove();
+            addMessage('assistant', '⚠️ 連線錯誤，請稍後再試');
+        }
+    }
+
+    // 一般諮詢發送
+    generalSendBtn.addEventListener('click', async () => {
+        const message = generalInput.value.trim();
+        if (!message) return;
+        
+        addMessage('user', message);
+        generalInput.value = '';
+        await processMessage('/api/chat', { message, history: conversationHistory.slice(-10) });
+    });
+
+    // 行業分析發送
+    industrySendBtn.addEventListener('click', async () => {
+        const industry = industryName.value.trim();
+        if (!industry) {
+            alert('請輸入行業名稱');
+            return;
+        }
+        
+        const process = industryProcess.value.trim();
+        const message = `【行業分析】${industry}${process ? ' - ' + process : ''}`;
+        addMessage('user', message);
+        
+        industryName.value = '';
+        industryProcess.value = '';
+        
+        await processMessage('/api/analyze-industry', { 
+            industry: industry, 
+            process_description: process 
+        });
+    });
+
+    // 排放計算發送
+    calculationSendBtn.addEventListener('click', async () => {
+        const source = sourceDesc.value.trim();
+        const data = activityData.value.trim();
+        
+        if (!source || !data) {
+            alert('請輸入排放源描述和活動數據');
+            return;
+        }
+        
+        const message = `【排放計算】${source} - ${data}`;
+        addMessage('user', message);
+        
+        sourceDesc.value = '';
+        activityData.value = '';
+        
+        await processMessage('/api/calculate-emission', { 
+            emission_source: `${source} ${data}`,
+            activity_data: { description: `${source} ${data}` }
+        });
+    });
+
+    // 行業排放源查詢功能（含製程）
+    queryBtn.addEventListener('click', async () => {
+        const industry = queryIndustry.value.trim();
+        const process = queryProcess.value.trim();
+        const source = querySource.value.trim();
+        
+        if (!industry || !source) {
+            alert('請至少輸入行業別和排放源');
+            return;
+        }
+        
+        const processText = process ? ` - 製程:${process}` : '';
+        const message = `【行業排放查詢】\n行業別：${industry}\n製程：${process || '未指定'}\n排放源：${source}`;
+        addMessage('user', message);
+        
+        queryIndustry.value = '';
+        queryProcess.value = '';
+        querySource.value = '';
+        
+        const loadingId = 'loading-' + Date.now();
+        const loadingDiv = document.createElement('div');
+        loadingDiv.classList.add('message', 'bot');
+        loadingDiv.id = loadingId;
+        loadingDiv.innerHTML = '<div class="bubble">⏳ 查詢排放係數中...</div>';
+        conversationDiv.appendChild(loadingDiv);
+        
+        try {
+            console.log('發送行業排放查詢:', { industry, process, source });
+            
+            const response = await fetch('/api/industry-emissions', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    industry: industry,
+                    process: process,
+                    emission_source: source
+                })
+            });
+            
+            const loading = document.getElementById(loadingId);
+            if (loading) loading.remove();
+            
+            if (response.ok) {
+                const data = await response.json();
+                addMessage('assistant', data.reply || '查詢成功');
+            } else {
+                const errorText = await response.text();
+                console.error('行業查詢失敗:', errorText);
+                addMessage('assistant', '⚠️ 查詢失敗，請稍後再試');
+            }
+        } catch (error) {
+            console.error('行業查詢錯誤:', error);
+            const loading = document.getElementById(loadingId);
+            if (loading) loading.remove();
+            addMessage('assistant', '⚠️ 連線錯誤');
+        }
+    });
+
+    // 專家諮詢主題卡片
+    expertTopics.forEach(card => {
+        card.addEventListener('click', () => {
+            const question = card.dataset.question;
+            if (question) {
+                // 自動切換到一般諮詢模式
+                modeBtns.forEach(b => b.classList.remove('active'));
+                modeInputSections.forEach(s => s.classList.remove('active-mode'));
+                document.querySelector('[data-mode="general"]').classList.add('active');
+                document.getElementById('general-input').classList.add('active-mode');
+                
+                generalInput.value = question;
+                generalSendBtn.click();
+            }
+        });
+    });
+
+    // 製程診斷 FAQ
+    processFaq.forEach(item => {
+        item.addEventListener('click', () => {
+            const question = item.dataset.question;
+            if (question) {
+                // 自動切換到一般諮詢模式
+                modeBtns.forEach(b => b.classList.remove('active'));
+                modeInputSections.forEach(s => s.classList.remove('active-mode'));
+                document.querySelector('[data-mode="general"]').classList.add('active');
+                document.getElementById('general-input').classList.add('active-mode');
+                
+                generalInput.value = question;
+                generalSendBtn.click();
+            }
+        });
+    });
+
+    // Enter 鍵發送
+    generalInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') generalSendBtn.click();
+    });
+    
+    industryName.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') industrySendBtn.click();
+    });
+    
+    sourceDesc.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') calculationSendBtn.click();
+    });
+    
+    querySource.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') queryBtn.click();
+    });
+</script>
+</body>
+</html>
