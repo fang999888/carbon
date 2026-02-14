@@ -71,6 +71,101 @@ def health():
         'timestamp': datetime.now().isoformat()
     })
 
+# ===== 新增的連線測試端點 =====
+@app.route('/api/test-connection')
+def test_connection():
+    """測試對 DeepSeek 的連線"""
+    logger.info("收到 /api/test-connection 請求")
+    results = {}
+    
+    # 測試 1: 基本網路連線 - 測試 Google
+    try:
+        r = requests.get("https://www.google.com", timeout=10)
+        results['google'] = {
+            'status': r.status_code,
+            'success': r.status_code == 200,
+            'message': '成功連線到 Google'
+        }
+    except Exception as e:
+        results['google'] = {
+            'error': str(e),
+            'success': False,
+            'message': f'連線 Google 失敗: {str(e)}'
+        }
+    
+    # 測試 2: 測試 DeepSeek 首頁
+    try:
+        r = requests.get("https://api.deepseek.com", timeout=10, allow_redirects=True)
+        results['deepseek_homepage'] = {
+            'status': r.status_code,
+            'success': r.status_code == 200,
+            'message': f'成功連線到 DeepSeek 首頁，狀態碼: {r.status_code}'
+        }
+    except Exception as e:
+        results['deepseek_homepage'] = {
+            'error': str(e),
+            'success': False,
+            'message': f'連線 DeepSeek 首頁失敗: {str(e)}'
+        }
+    
+    # 測試 3: 測試 DeepSeek API 端點（不帶 API Key）
+    try:
+        r = requests.get("https://api.deepseek.com/v1/chat/completions", timeout=10)
+        results['api_endpoint'] = {
+            'status': r.status_code,
+            'success': r.status_code == 200,
+            'message': f'API 端點回應狀態碼: {r.status_code}'
+        }
+    except Exception as e:
+        results['api_endpoint'] = {
+            'error': str(e),
+            'success': False,
+            'message': f'連線 API 端點失敗: {str(e)}'
+        }
+    
+    # 測試 4: 如果有 API Key，測試真實 API 呼叫
+    if DEEPSEEK_API_KEY:
+        try:
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {DEEPSEEK_API_KEY}"
+            }
+            test_payload = {
+                "model": "deepseek-chat",
+                "messages": [{"role": "user", "content": "Hello"}],
+                "max_tokens": 5
+            }
+            r = requests.post(
+                DEEPSEEK_API_URL,
+                headers=headers,
+                json=test_payload,
+                timeout=10
+            )
+            results['api_with_key'] = {
+                'status': r.status_code,
+                'success': r.status_code == 200,
+                'message': f'API 金鑰測試回應狀態碼: {r.status_code}',
+                'response_preview': r.text[:100] if r.text else None
+            }
+        except Exception as e:
+            results['api_with_key'] = {
+                'error': str(e),
+                'success': False,
+                'message': f'API 金鑰測試失敗: {str(e)}'
+            }
+    else:
+        results['api_with_key'] = {
+            'success': False,
+            'message': '無 API Key，跳過測試'
+        }
+    
+    return jsonify({
+        'api_key_configured': bool(DEEPSEEK_API_KEY),
+        'connection_tests': results,
+        'timestamp': datetime.now().isoformat()
+    })
+# ===== 新增端點結束 =====
+
 @app.route('/api/chat', methods=['POST'])
 def chat():
     """處理聊天請求"""
@@ -155,7 +250,12 @@ def chat():
         return jsonify({'error': 'API 請求超時，請稍後再試'}), 504
     except requests.exceptions.ConnectionError as e:
         logger.error(f"API 連線錯誤: {str(e)}")
-        return jsonify({'error': '無法連線到 DeepSeek API'}), 503
+        logger.error(f"錯誤類型: {type(e).__name__}")
+        return jsonify({
+            'error': '無法連線到 DeepSeek API',
+            'detail': str(e),
+            'type': type(e).__name__
+        }), 503
     except Exception as e:
         logger.error(f"伺服器錯誤: {str(e)}")
         logger.error(traceback.format_exc())
