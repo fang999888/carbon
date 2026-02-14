@@ -2,6 +2,7 @@ import os
 import logging
 import json
 import traceback
+import re
 from datetime import datetime
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
@@ -208,18 +209,19 @@ def chat():
         logger.error(f"錯誤: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-# ========== 行業排放源查詢功能 ==========
+# ========== 行業排放源查詢功能（含製程）==========
 @app.route('/api/industry-emissions', methods=['POST'])
 def industry_emissions():
-    """行業別排放源查詢 - 讓使用者輸入行業別和排放源，BOT確認範疇和係數"""
+    """行業別排放源查詢 - 加入製程參數"""
     logger.info("收到 /api/industry-emissions 請求")
     
     try:
         data = request.json
         industry = data.get('industry', '')
+        process = data.get('process', '')  # 製程參數
         emission_source = data.get('emission_source', '')
         
-        logger.info(f"行業排放查詢: {industry} - {emission_source}")
+        logger.info(f"行業排放查詢: 行業={industry}, 製程={process}, 排放源={emission_source}")
         
         if not industry or not emission_source:
             return jsonify({'error': '請提供行業別和排放源'}), 400
@@ -227,13 +229,20 @@ def industry_emissions():
         if not DEEPSEEK_API_KEY:
             return jsonify({'error': 'API Key 未設定'}), 500
         
-        # 專門用於行業排放查詢的提示詞
+        # 根據是否有製程資訊調整提示詞
+        process_info = f"製程/設備：{process}" if process else "製程/設備：未指定（請依一般行業特性推估）"
+        
         query_prompt = f"""請針對以下資訊提供碳盤查專業建議，要非常具體實用：
 
 行業別：{industry}
+{process_info}
 排放源：{emission_source}
 
-請按照以下格式回答：
+請按照以下格式回答，要特別注意製程對排放係數的影響：
+
+【製程特性說明】
+- 此製程/設備的排放特性：______
+- 與其他製程的差異：______
 
 【範疇分類】
 - 範疇：______ (請說明是範疇一/二/三，以及原因)
@@ -246,6 +255,7 @@ def industry_emissions():
 - 建議係數值：______ (請給出具體數值，例如: 0.495 kg CO2e/度)
 - 係數來源：______ (IPCC/環保署/IEA/DEFRA/Ecoinvent/其他)
 - 單位：______
+- 是否因製程而異：______ (說明製程對係數的影響)
 
 【計算公式】
 - 公式：______
@@ -255,8 +265,9 @@ def industry_emissions():
 【實務建議】
 - 常見問題：______
 - 注意事項：______
+- 製程改善建議：______
 
-請確保回答非常具體實用，包含實際的係數數值。"""
+請確保回答非常具體實用，包含實際的係數數值，並強調製程對排放的影響。"""
         
         headers = {
             "Content-Type": "application/json",
@@ -266,11 +277,11 @@ def industry_emissions():
         payload = {
             "model": "deepseek-chat",
             "messages": [
-                {"role": "system", "content": "你是一位實用型碳管理顧問，專注於提供具體的排放係數和計算方式。回答要包含實際的數值，不要只是籠統的說明。"},
+                {"role": "system", "content": "你是一位實用型碳管理顧問，專注於提供具體的排放係數和計算方式。回答要包含實際的數值，並特別注意不同製程對排放係數的影響。"},
                 {"role": "user", "content": query_prompt}
             ],
             "temperature": 0.3,
-            "max_tokens": 1000,
+            "max_tokens": 1200,
             "top_p": 0.95
         }
         
@@ -279,7 +290,7 @@ def industry_emissions():
             DEEPSEEK_API_URL,
             headers=headers,
             json=payload,
-            timeout=30
+            timeout=45
         )
         
         if response.status_code == 200:
@@ -290,6 +301,7 @@ def industry_emissions():
             return jsonify({
                 'reply': reply_content,
                 'industry': industry,
+                'process': process,
                 'emission_source': emission_source,
                 'timestamp': datetime.now().isoformat()
             })
@@ -305,7 +317,7 @@ def industry_emissions():
         logger.error(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
-# ========== 行業分析功能 (模式2) ==========
+# ========== 行業分析功能 ==========
 @app.route('/api/analyze-industry', methods=['POST'])
 def analyze_industry():
     """🏭 行業分析 - 針對特定行業進行完整排放分析"""
@@ -395,7 +407,7 @@ def analyze_industry():
         logger.error(f"行業分析錯誤: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-# ========== 排放計算功能 (模式3) ==========
+# ========== 排放計算功能 ==========
 @app.route('/api/calculate-emission', methods=['POST'])
 def calculate_emission():
     """🧮 排放計算 - 協助使用者計算具體的碳排放量"""
@@ -409,9 +421,8 @@ def calculate_emission():
         # 如果 activity_data 是空的，但 emission_source 有值，嘗試解析
         if not activity_data and emission_source:
             # 嘗試從文字中解析數值
-            import re
             numbers = re.findall(r'\d+\.?\d*', emission_source)
-            units = re.findall(r'(度|kWh|立方公尺|公升|L|kg|噸|公里|km)', emission_source)
+            units = re.findall(r'(度|kWh|立方公尺|公升|L|kg|噸|公里|km|m³|m3)', emission_source)
             
             activity_data = {
                 'description': emission_source,
