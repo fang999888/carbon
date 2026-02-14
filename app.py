@@ -1,8 +1,40 @@
+import os
+import logging
+from datetime import datetime
+from flask import Flask, request, jsonify, render_template
+from flask_cors import CORS
+import requests
+
+# 設定日誌
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+app = Flask(__name__)
+CORS(app)
+
+# DeepSeek API 配置
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions"
+
+@app.route('/')
+def index():
+    """首頁"""
+    try:
+        return render_template('index.html')
+    except Exception as e:
+        return f"Error: {e}", 500
+
+@app.route('/api/health')
+def health():
+    """健康檢查"""
+    return jsonify({
+        'status': 'ok',
+        'api_key': 'yes' if DEEPSEEK_API_KEY else 'no'
+    })
+
 @app.route('/api/chat', methods=['POST'])
 def chat():
-    """超級簡化版 - 讓顧問變笨"""
-    logger.info("收到 /api/chat 請求")
-    
+    """超簡化版聊天"""
     try:
         data = request.json
         user_message = data.get('message', '')
@@ -11,11 +43,9 @@ def chat():
             return jsonify({'error': '請輸入訊息'}), 400
         
         if not DEEPSEEK_API_KEY:
-            return jsonify({'error': 'API Key 未設定'}), 500
+            return jsonify({'error': 'No API Key'}), 500
         
-        # 超級簡化的系統提示詞
-        system_prompt = "你是碳盤查專家，請用一兩句話簡單回答。"
-        
+        # 直接呼叫 DeepSeek，不加任何系統提示詞
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {DEEPSEEK_API_KEY}"
@@ -24,31 +54,30 @@ def chat():
         payload = {
             "model": "deepseek-chat",
             "messages": [
-                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_message}
             ],
-            "temperature": 0.3,  # 調低溫度，讓它更直接
-            "max_tokens": 150,   # 大幅減少，不要想太多
-            "stream": False
+            "max_tokens": 100
         }
         
-        logger.info("發送請求至 DeepSeek API")
         response = requests.post(
             DEEPSEEK_API_URL,
             headers=headers,
             json=payload,
-            timeout=30
+            timeout=10
         )
         
         if response.status_code == 200:
             result = response.json()
             return jsonify({
-                'reply': result['choices'][0]['message']['content'],
-                'timestamp': datetime.now().isoformat()
+                'reply': result['choices'][0]['message']['content']
             })
         else:
-            return jsonify({'error': f'API錯誤: {response.status_code}'}), 502
+            return jsonify({'error': f'API Error: {response.status_code}'}), 502
             
     except Exception as e:
-        logger.error(f"錯誤: {str(e)}")
-        return jsonify({'error': '系統錯誤'}), 502
+        logger.error(f"Error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
