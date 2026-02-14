@@ -5,16 +5,157 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>碳盤查專家 · DeepSeek 顧問</title>
     <style>
-        /* 此處沿用之前的 CSS 樣式，為了簡潔省略，請複製之前的 style 內容 */
-        /* 但需新增一個「專家分析模式」的切換按鈕樣式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(145deg, #e8f4e5 0%, #d1e9d0 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+
+        .chat-container {
+            max-width: 1000px;
+            width: 100%;
+            background-color: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 42px 42px 36px 36px;
+            box-shadow: 0 20px 40px -8px rgba(40, 70, 40, 0.4),
+                        0 0 0 1px rgba(120, 150, 120, 0.2) inset;
+            overflow: hidden;
+        }
+
+        .header {
+            background: #2f5e4e;
+            color: white;
+            padding: 1.4rem 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+            border-bottom: 4px solid #afcbac;
+        }
+
+        .header h1 {
+            font-weight: 500;
+            font-size: 1.8rem;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header h1 span {
+            background: #b7d7b0;
+            color: #1c3b2f;
+            font-size: 1rem;
+            padding: 0.2rem 1rem;
+            border-radius: 40px;
+            font-weight: 400;
+            margin-left: 0.5rem;
+        }
+
+        .badge-container {
+            margin-left: auto;
+            display: flex;
+            gap: 12px;
+        }
+
+        .badge {
+            background: #457a66;
+            padding: 0.4rem 1rem;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            font-weight: 400;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            border: 1px solid #9bc0a2;
+            color: #f5fdee;
+        }
+
+        .chat-area {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .conversation {
+            background: #f9fff9;
+            padding: 2rem 2rem 1.5rem 2rem;
+            max-height: 380px;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+            border-bottom: 2px dashed #c0ddbc;
+        }
+
+        .message {
+            display: flex;
+            margin-bottom: 1.4rem;
+            align-items: flex-end;
+        }
+
+        .message.bot {
+            justify-content: flex-start;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .bubble {
+            max-width: 75%;
+            padding: 0.9rem 1.5rem;
+            border-radius: 28px 28px 8px 28px;
+            font-size: 1rem;
+            line-height: 1.5;
+            box-shadow: 0 4px 8px rgba(0, 20, 0, 0.04);
+            word-break: break-word;
+            white-space: pre-wrap;
+        }
+
+        .bot .bubble {
+            background: #e1f0dd;
+            border-radius: 8px 28px 28px 28px;
+            color: #1f3b2c;
+            border: 1px solid #bcdbb6;
+        }
+
+        .user .bubble {
+            background: #30755b;
+            color: white;
+            border-radius: 28px 8px 28px 28px;
+            border: 1px solid #1d543f;
+        }
+
+        .timestamp {
+            font-size: 0.65rem;
+            color: #748d74;
+            margin: 0 0.5rem 0.3rem 0.5rem;
+        }
+
+        .query-panel {
+            padding: 1.8rem 2rem 2rem 2rem;
+            background: #ffffffd9;
+            backdrop-filter: blur(4px);
+        }
+
         .mode-switch {
             display: flex;
             gap: 10px;
-            margin: 10px 0;
+            margin: 0 0 20px 0;
             padding: 10px;
             background: #e8f4e5;
             border-radius: 40px;
         }
+
         .mode-btn {
             flex: 1;
             padding: 10px;
@@ -25,15 +166,183 @@
             font-weight: 500;
             transition: 0.2s;
         }
+
         .mode-btn.active {
             background: #2f5e4e;
             color: white;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: #1d4e3d;
+            margin-bottom: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .coefficient-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .coef-card {
+            background: #f0f9ef;
+            padding: 1.2rem 1rem;
+            border-radius: 26px;
+            border: 1px solid #bcd9b2;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 2px 6px rgba(100, 130, 100, 0.1);
+        }
+
+        .coef-card:hover {
+            background: #dff2db;
+            border-color: #609f6b;
+            transform: translateY(-4px);
+            box-shadow: 0 16px 20px -12px #6f9e7a;
+        }
+
+        .coef-card h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1f573f;
+            margin-bottom: 0.3rem;
+        }
+
+        .coef-card p {
+            font-size: 0.85rem;
+            color: #3b5b48;
+            opacity: 0.9;
+        }
+
+        .faq-section {
+            background: #eaf6e9;
+            border-radius: 32px;
+            padding: 1.5rem 1.8rem;
+            margin-top: 1.2rem;
+            border: 1px solid #b1cfb1;
+        }
+
+        .faq-title {
+            font-weight: 500;
+            color: #204e34;
+            margin-bottom: 1.2rem;
+            font-size: 1.1rem;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .faq-bubbles {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.7rem;
+        }
+
+        .faq-item {
+            background: white;
+            border: 1px solid #9fc0a2;
+            color: #1b4a32;
+            padding: 0.6rem 1.4rem;
+            border-radius: 40px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.15s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .faq-item:hover {
+            background: #31755b;
+            color: white;
+            border-color: #246b4a;
+            box-shadow: 0 8px 14px -8px #2d6b4c;
+        }
+
+        .input-area {
+            display: flex;
+            padding: 1.3rem 2rem 1.8rem 2rem;
+            background: #e2f0df;
+            gap: 0.8rem;
+            align-items: center;
+            border-top: 2px solid #b7d7b2;
+        }
+
+        .input-area input {
+            flex: 1;
+            padding: 1rem 1.5rem;
+            border: none;
+            border-radius: 40px;
+            background: white;
+            font-size: 1rem;
+            outline: 2px solid transparent;
+            transition: 0.2s;
+            box-shadow: 0 2px 8px rgba(70, 100, 70, 0.1);
+        }
+
+        .input-area input:focus {
+            outline: 2px solid #538e70;
+            background-color: #f6fff0;
+        }
+
+        .send-btn {
+            background: #1f604a;
+            color: white;
+            border: none;
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            font-size: 1.6rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: 0.15s;
+            box-shadow: 0 4px 8px #467a5e;
+            line-height: 1;
+        }
+
+        .send-btn:hover {
+            background: #124f3b;
+            transform: scale(1.04);
+        }
+
+        .send-btn:active {
+            transform: scale(0.97);
+        }
+
+        .footnote {
+            text-align: center;
+            padding: 0.8rem 1rem;
+            background: #cfe5cb;
+            color: #194433;
+            font-size: 0.8rem;
+            letter-spacing: 0.3px;
+            border-top: 1px solid #aac8aa;
+        }
+
+        .icon-leaf {
+            display: inline-block;
+            font-size: 1.2rem;
+            filter: drop-shadow(0 2px 2px #559966);
+        }
+
+        .deploy-hint {
+            background: #286b4e20;
+            border-radius: 20px;
+            padding: 0.2rem 1.2rem;
+            color: #2a5e45;
+            font-size: 0.85rem;
+            border: 1px dashed #457a60;
         }
     </style>
 </head>
 <body>
 <div class="chat-container">
-    <!-- 頁首 -->
     <div class="header">
         <h1>
             🌱 碳盤查專家顧問
@@ -45,7 +354,6 @@
         </div>
     </div>
 
-    <!-- 對話視窗 -->
     <div class="chat-area">
         <div class="conversation" id="conversation">
             <div class="message bot">
@@ -62,7 +370,6 @@
             </div>
         </div>
 
-        <!-- 專家模式切換 -->
         <div class="query-panel">
             <div class="mode-switch">
                 <button class="mode-btn active" data-mode="general">💬 一般諮詢</button>
@@ -70,7 +377,6 @@
                 <button class="mode-btn" data-mode="calculation">🧮 排放計算</button>
             </div>
 
-            <!-- 快速提問卡片 -->
             <div class="section-title">
                 <span class="icon-leaf">📋</span> 專家諮詢主題
             </div>
@@ -93,7 +399,6 @@
                 </div>
             </div>
 
-            <!-- 產業常見問題 -->
             <div class="faq-section">
                 <div class="faq-title">
                     <span>🔧 製程與設備診斷</span>
@@ -109,7 +414,6 @@
             </div>
         </div>
 
-        <!-- 輸入區 -->
         <div class="input-area">
             <input type="text" id="userInput" placeholder="請描述您的企業概況或詢問碳管理問題..." autocomplete="off">
             <button class="send-btn" id="sendBtn">➤</button>
@@ -121,6 +425,7 @@
 </div>
 
 <script>
+    // DOM 元素
     const conversationDiv = document.getElementById('conversation');
     const userInput = document.getElementById('userInput');
     const sendBtn = document.getElementById('sendBtn');
@@ -128,8 +433,10 @@
     const expertTopics = document.querySelectorAll('.coef-card');
     const processFaq = document.querySelectorAll('.faq-item');
 
+    // 狀態變數
     let currentMode = 'general';
     let conversationHistory = [];
+    let isProcessing = false;
 
     // 切換模式
     modeBtns.forEach(btn => {
@@ -149,15 +456,13 @@
         });
     });
 
-    // 新增訊息
+    // 新增訊息到對話框
     function addMessage(role, content) {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message', role === 'user' ? 'user' : 'bot');
 
         const bubbleDiv = document.createElement('div');
         bubbleDiv.classList.add('bubble');
-        
-        // 處理換行
         bubbleDiv.innerText = content;
 
         const timestamp = document.createElement('div');
@@ -171,8 +476,11 @@
         conversationDiv.appendChild(messageDiv);
         conversationDiv.scrollTop = conversationDiv.scrollHeight;
 
-        // 儲存到歷史記錄
+        // 儲存到歷史記錄（只保留最近20筆）
         conversationHistory.push({ role, content });
+        if (conversationHistory.length > 20) {
+            conversationHistory.shift();
+        }
     }
 
     // 顯示載入中
@@ -198,8 +506,10 @@
 
     // 發送訊息到後端
     async function sendMessage(message) {
-        if (!message.trim()) return;
+        if (!message.trim() || isProcessing) return;
 
+        isProcessing = true;
+        
         // 顯示使用者訊息
         addMessage('user', message);
         
@@ -207,11 +517,11 @@
         showLoading();
 
         try {
-            // 根據模式選擇不同的 API 端點
+            // 根據模式選擇 API 端點
             let apiUrl = '/api/chat';
             let payload = {
                 message: message,
-                history: conversationHistory.slice(-10) // 傳送最近10筆
+                history: conversationHistory.slice(-10)
             };
 
             if (currentMode === 'industry') {
@@ -228,30 +538,61 @@
                 };
             }
 
+            console.log(`呼叫 API: ${apiUrl}`, payload); // 除錯用
+
+            // 設定超時
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超時
+
             // 呼叫 API
             const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
+                signal: controller.signal
             });
 
-            const data = await response.json();
-            
+            clearTimeout(timeoutId);
+
+            console.log('API 回應狀態:', response.status); // 除錯用
+
             // 移除載入中
             removeLoading();
 
             if (response.ok) {
-                const reply = data.reply || data.analysis || data.calculation || '無法取得回應';
+                const data = await response.json();
+                console.log('API 回應資料:', data); // 除錯用
+                
+                // 根據不同的 API 回應格式取得回覆內容
+                const reply = data.reply || data.analysis || data.calculation || JSON.stringify(data);
                 addMessage('assistant', reply);
             } else {
-                addMessage('assistant', `⚠️ 錯誤：${data.error || '無法連接到專家系統'}`);
+                const errorData = await response.text();
+                console.error('API 錯誤:', response.status, errorData);
+                
+                let errorMessage = `⚠️ 錯誤 (${response.status})：`;
+                if (response.status === 404) {
+                    errorMessage += 'API 端點不存在，請確認後端路由設定';
+                } else if (response.status === 500) {
+                    errorMessage += '伺服器內部錯誤，請查看後端日誌';
+                } else {
+                    errorMessage += '無法連接到專家系統';
+                }
+                addMessage('assistant', errorMessage);
             }
         } catch (error) {
             removeLoading();
-            addMessage('assistant', '⚠️ 網路連線錯誤，請稍後再試。');
-            console.error('Error:', error);
+            console.error('網路錯誤:', error);
+            
+            if (error.name === 'AbortError') {
+                addMessage('assistant', '⚠️ 請求超時，請稍後再試。');
+            } else {
+                addMessage('assistant', '⚠️ 網路連線錯誤，請檢查網路後再試。');
+            }
+        } finally {
+            isProcessing = false;
         }
 
         userInput.value = '';
@@ -260,24 +601,47 @@
     // 綁定事件
     sendBtn.addEventListener('click', () => sendMessage(userInput.value));
     userInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') sendMessage(userInput.value);
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage(userInput.value);
+        }
     });
 
     // 綁定快速提問
     expertTopics.forEach(card => {
         card.addEventListener('click', () => {
             const question = card.dataset.question;
-            userInput.value = question;
-            sendMessage(question);
+            if (question) {
+                userInput.value = question;
+                sendMessage(question);
+            }
         });
     });
 
     processFaq.forEach(item => {
         item.addEventListener('click', () => {
             const question = item.dataset.question;
-            userInput.value = question;
-            sendMessage(question);
+            if (question) {
+                userInput.value = question;
+                sendMessage(question);
+            }
         });
+    });
+
+    // 測試 API 連接（頁面載入時）
+    window.addEventListener('load', async () => {
+        try {
+            const response = await fetch('/api/health');
+            const data = await response.json();
+            console.log('API 健康狀態:', data);
+            
+            if (!data.api_key_configured) {
+                console.warn('警告：DeepSeek API Key 未設定');
+                addMessage('assistant', '⚠️ 系統提示：DeepSeek API Key 尚未設定，請在 Render 環境變數中設定 DEEPSEEK_API_KEY');
+            }
+        } catch (error) {
+            console.error('無法連接到 API:', error);
+        }
     });
 </script>
 </body>
