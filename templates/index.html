@@ -470,7 +470,6 @@
         </div>
     </div>
 </div>
-
 <script>
     // DOM 元素
     const conversationDiv = document.getElementById('conversation');
@@ -485,7 +484,7 @@
     const sourceInput = document.getElementById('sourceInput');
     const queryBtn = document.getElementById('queryEmissionsBtn');
 
-    let currentMode = 'general';
+    let currentMode = 'general';  // 預設一般諮詢模式
     let conversationHistory = [];
 
     // 頁面載入時測試 API 連線
@@ -494,18 +493,42 @@
             const response = await fetch('/api/health');
             const data = await response.json();
             console.log('API 連線成功:', data);
+            
+            // 顯示當前模式
+            updateModeDisplay();
         } catch (error) {
             console.error('API 連線失敗:', error);
+            addMessage('assistant', '⚠️ 無法連線到後端伺服器，請重新整理頁面');
         }
     });
 
+    // 模式切換功能
     modeBtns.forEach(btn => {
         btn.addEventListener('click', function() {
+            // 移除所有 active 類別
             modeBtns.forEach(b => b.classList.remove('active'));
+            // 為當前按鈕加上 active 類別
             this.classList.add('active');
+            // 更新當前模式
             currentMode = this.dataset.mode;
+            
+            console.log('切換模式為:', currentMode);
+            
+            // 根據模式改變輸入框提示
+            updateModeDisplay();
         });
     });
+
+    // 更新模式顯示
+    function updateModeDisplay() {
+        if (currentMode === 'industry') {
+            userInput.placeholder = '🏭 請輸入行業名稱 (例如: 鋼鐵業、食品業、電子業)';
+        } else if (currentMode === 'calculation') {
+            userInput.placeholder = '🧮 請輸入排放源和數據 (例如: 天然氣 1000立方公尺)';
+        } else {
+            userInput.placeholder = '💬 請描述您的碳管理問題...';
+        }
+    }
 
     function addMessage(role, content) {
         const messageDiv = document.createElement('div');
@@ -538,6 +561,7 @@
         addMessage('user', message);
         userInput.value = '';
 
+        // 顯示載入中
         const loadingId = 'loading-' + Date.now();
         const loadingDiv = document.createElement('div');
         loadingDiv.classList.add('message', 'bot');
@@ -546,45 +570,91 @@
         conversationDiv.appendChild(loadingDiv);
 
         try {
-            let apiUrl = '/api/chat';
-            let payload = { message, history: conversationHistory.slice(-10) };
+            // 根據當前模式決定 API 端點和請求內容
+            let apiUrl = '';
+            let payload = {};
             
             if (currentMode === 'industry') {
+                // 行業分析模式
                 apiUrl = '/api/analyze-industry';
-                payload = { industry: message, process_description: '' };
-            } else if (currentMode === 'calculation') {
+                payload = { 
+                    industry: message, 
+                    process_description: '' 
+                };
+                console.log('使用行業分析模式:', apiUrl);
+            } 
+            else if (currentMode === 'calculation') {
+                // 排放計算模式
                 apiUrl = '/api/calculate-emission';
-                payload = { emission_source: '一般排放源', activity_data: { description: message } };
+                payload = { 
+                    emission_source: message,
+                    activity_data: { description: message }
+                };
+                console.log('使用排放計算模式:', apiUrl);
+            } 
+            else {
+                // 一般諮詢模式
+                apiUrl = '/api/chat';
+                payload = { 
+                    message: message, 
+                    history: conversationHistory.slice(-10) 
+                };
+                console.log('使用一般諮詢模式:', apiUrl);
             }
+
+            console.log('發送請求到:', apiUrl);
+            console.log('請求內容:', payload);
 
             const response = await fetch(apiUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
                 body: JSON.stringify(payload)
             });
             
+            // 移除載入中
             const loading = document.getElementById(loadingId);
             if (loading) loading.remove();
 
+            console.log('回應狀態碼:', response.status);
+
             if (response.ok) {
                 const data = await response.json();
-                const reply = data.reply || data.analysis || data.calculation;
+                console.log('回應資料:', data);
+                
+                // 根據不同的 API 回應格式取得回覆內容
+                let reply = '';
+                if (data.reply) {
+                    reply = data.reply;
+                } else if (data.analysis) {
+                    reply = data.analysis;
+                } else if (data.calculation) {
+                    reply = data.calculation;
+                } else {
+                    reply = JSON.stringify(data, null, 2);
+                }
+                
                 if (reply) {
                     addMessage('assistant', reply);
                 } else {
                     addMessage('assistant', '抱歉，無法取得回應');
                 }
             } else {
+                const errorText = await response.text();
+                console.error('API 錯誤:', response.status, errorText);
                 addMessage('assistant', `⚠️ 錯誤 (${response.status})：無法連接到專家系統`);
             }
         } catch (error) {
+            console.error('發送失敗:', error);
             const loading = document.getElementById(loadingId);
             if (loading) loading.remove();
             addMessage('assistant', '⚠️ 連線錯誤，請稍後再試');
         }
     }
 
-    // 新增：行業排放源查詢功能
+    // 行業排放源查詢功能
     queryBtn.addEventListener('click', async () => {
         const industry = industryInput.value.trim();
         const source = sourceInput.value.trim();
@@ -608,9 +678,14 @@
         conversationDiv.appendChild(loadingDiv);
         
         try {
+            console.log('發送行業排放查詢:', { industry, source });
+            
             const response = await fetch('/api/industry-emissions', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
                 body: JSON.stringify({ 
                     industry: industry,
                     emission_source: source
@@ -620,13 +695,19 @@
             const loading = document.getElementById(loadingId);
             if (loading) loading.remove();
             
+            console.log('行業查詢回應狀態:', response.status);
+            
             if (response.ok) {
                 const data = await response.json();
-                addMessage('assistant', data.reply);
+                console.log('行業查詢回應:', data);
+                addMessage('assistant', data.reply || '查詢成功');
             } else {
+                const errorText = await response.text();
+                console.error('行業查詢失敗:', errorText);
                 addMessage('assistant', '⚠️ 查詢失敗，請稍後再試');
             }
         } catch (error) {
+            console.error('行業查詢錯誤:', error);
             const loading = document.getElementById(loadingId);
             if (loading) loading.remove();
             addMessage('assistant', '⚠️ 連線錯誤');
@@ -638,6 +719,7 @@
         if (e.key === 'Enter') sendMessage();
     });
 
+    // 專家諮詢主題卡片
     expertTopics.forEach(card => {
         card.addEventListener('click', () => {
             const question = card.dataset.question;
@@ -648,6 +730,7 @@
         });
     });
 
+    // 製程診斷 FAQ
     processFaq.forEach(item => {
         item.addEventListener('click', () => {
             const question = item.dataset.question;
@@ -657,6 +740,10 @@
             }
         });
     });
+
+    // 初始化模式顯示
+    updateModeDisplay();
 </script>
+
 </body>
 </html>
