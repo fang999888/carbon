@@ -53,6 +53,13 @@
             gap: 10px;
         }
 
+        .logo-image {
+            height: 2rem;          /* 與文字大小配合 */
+            width: auto;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
         .header h1 span {
             background: #b7d7b0;
             color: #1c3b2f;
@@ -80,6 +87,10 @@
             gap: 5px;
             border: 1px solid #9bc0a2;
             color: #f5fdee;
+        }
+
+        .badge-logo {
+            font-size: 1.2rem;
         }
 
         .chat-area {
@@ -424,11 +435,13 @@
 <div class="chat-container">
     <div class="header">
         <h1>
-            🌱 蕨積溫室氣體盤查顧問
+            <!-- 使用根目錄的 logo.png 作為 Logo -->
+            <img src="/logo.png" alt="蕨積" class="logo-image">
+            蕨積溫室氣體盤查顧問
             <span>綠色生活驅動</span>
         </h1>
         <div class="badge-container">
-            <div class="badge">淨零碳排地球永續</div>
+            <div class="badge"><span class="badge-logo">🌍</span> 淨零碳排地球永續</div>
             <div class="badge">⚡ ISO 14064-1/14067</div>
         </div>
     </div>
@@ -637,7 +650,7 @@
         timestamp.classList.add('timestamp');
         const now = new Date();
         const timeStr = now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
-        timestamp.innerText = (role === 'user' ? '我' : '專家') + ' ' + timeStr;
+        timestamp.innerText = (role === 'user' ? '我' : '顧問') + ' ' + timeStr;
         
         messageDiv.appendChild(bubbleDiv);
         messageDiv.appendChild(timestamp);
@@ -655,7 +668,7 @@
         const loadingDiv = document.createElement('div');
         loadingDiv.classList.add('message', 'bot');
         loadingDiv.id = loadingId;
-        loadingDiv.innerHTML = '<div class="bubble">⏳ 專家思考中...</div>';
+        loadingDiv.innerHTML = '<div class="bubble">⏳ 顧問思考中...</div>';
         conversationDiv.appendChild(loadingDiv);
 
         try {
@@ -697,6 +710,8 @@
         
         addMessage('user', message);
         generalInput.value = '';
+        // 若希望增加回答字數，可考慮在 payload 中加入 detail_level 參數，例如 'detailed'
+        // 但需後端支援。目前維持基本呼叫。
         await processMessage('/api/chat', { message, history: conversationHistory.slice(-10) });
     });
 
