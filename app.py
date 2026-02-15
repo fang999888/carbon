@@ -185,7 +185,7 @@ def chat():
             "model": "deepseek-chat",
             "messages": messages,
             "temperature": 0.7,
-            "max_tokens": 1000,
+            "max_tokens": 2500,  # 🔹 從 1000 調高為 2500，讓回答更完整
             "top_p": 0.95
         }
         
@@ -193,7 +193,7 @@ def chat():
             DEEPSEEK_API_URL,
             headers=headers,
             json=payload,
-            timeout=30
+            timeout=60  # 🔹 增加 timeout 到 60 秒，避免超時
         )
         
         if response.status_code == 200:
@@ -281,7 +281,7 @@ def industry_emissions():
                 {"role": "user", "content": query_prompt}
             ],
             "temperature": 0.3,
-            "max_tokens": 1200,
+            "max_tokens": 2500,  # 🔹 從 1200 調高為 2500
             "top_p": 0.95
         }
         
@@ -290,7 +290,7 @@ def industry_emissions():
             DEEPSEEK_API_URL,
             headers=headers,
             json=payload,
-            timeout=45
+            timeout=60  # 🔹 統一為 60 秒
         )
         
         if response.status_code == 200:
@@ -382,7 +382,7 @@ def analyze_industry():
                 {"role": "user", "content": prompt}
             ],
             "temperature": 0.7,
-            "max_tokens": 2000,
+            "max_tokens": 3000,  # 🔹 從 2000 調高為 3000，行業分析需要較長篇幅
             "top_p": 0.95
         }
         
@@ -391,7 +391,7 @@ def analyze_industry():
             DEEPSEEK_API_URL,
             headers=headers,
             json=payload,
-            timeout=45
+            timeout=60  # 🔹 統一為 60 秒
         )
         
         if response.status_code == 200:
@@ -482,7 +482,7 @@ def calculate_emission():
                 {"role": "user", "content": prompt}
             ],
             "temperature": 0.3,  # 計算需要精確，降低溫度
-            "max_tokens": 1500,
+            "max_tokens": 2500,  # 🔹 從 1500 調高為 2500
             "top_p": 0.95
         }
         
@@ -491,7 +491,7 @@ def calculate_emission():
             DEEPSEEK_API_URL,
             headers=headers,
             json=payload,
-            timeout=45
+            timeout=60  # 🔹 統一為 60 秒
         )
         
         if response.status_code == 200:
