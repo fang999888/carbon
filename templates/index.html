@@ -685,6 +685,174 @@ padding: 1.6rem;
 
 
 }
+/* =========================
+   系統卡片式歡迎訊息
+   不改 HTML
+========================= */
+
+
+/* 整個歡迎泡泡變卡片 */
+
+.message.bot:first-child .bubble {
+
+    background: white;
+
+    border-radius: 18px;
+
+    padding: 22px 26px;
+
+    border: 1px solid #d6e6d3;
+
+    box-shadow:
+
+        0 8px 24px rgba(30, 60, 30, 0.08);
+
+}
+
+
+/* 第一行標題 */
+
+.message.bot:first-child .bubble strong {
+
+    font-size: 1.15rem;
+
+    display: inline-block;
+
+    margin-bottom: 12px;
+
+}
+
+
+
+/* 左右兩欄變真正卡片區 */
+
+.message.bot:first-child .bubble > div {
+
+    margin-top: 14px;
+
+    padding-top: 14px;
+
+    border-top: 1px solid #e6f0e4;
+
+}
+
+
+
+/* 欄位容器 */
+
+.message.bot:first-child .bubble > div > div {
+
+    background: #f6fbf5;
+
+    padding: 14px 16px;
+
+    border-radius: 12px;
+
+    border: 1px solid #e1efe0;
+
+}
+
+
+
+/* 標題 */
+
+.message.bot:first-child .bubble div[style*="font-weight: 600"] {
+
+    font-size: 0.95rem !important;
+
+    margin-bottom: 6px !important;
+
+    color: #2c5a3f;
+
+}
+
+
+
+/* 清單 */
+
+.message.bot:first-child .bubble ul {
+
+    padding-left: 18px;
+
+    margin: 0;
+
+}
+
+
+
+.message.bot:first-child .bubble li {
+
+    margin-bottom: 4px;
+
+    font-size: 0.92rem;
+
+    line-height: 1.45;
+
+}
+
+
+
+/* 最下面說明文字 */
+
+.message.bot:first-child .bubble br + text {
+
+    font-size: 0.9rem;
+
+}
+
+
+
+/* 加一條左側系統線 */
+
+.message.bot:first-child {
+
+    position: relative;
+
+}
+
+
+
+.message.bot:first-child:before {
+
+    content: "";
+
+    position: absolute;
+
+    left: -12px;
+
+    top: 10px;
+
+    bottom: 10px;
+
+    width: 4px;
+
+    background:
+
+    linear-gradient(
+
+        to bottom,
+
+        #6fae7a,
+
+        #2f5e4e);
+
+    border-radius: 4px;
+
+}
+
+
+
+/* hover 微動態 */
+
+.message.bot:first-child .bubble:hover {
+
+    transform: translateY(-2px);
+
+    box-shadow:
+
+        0 14px 34px rgba(30, 60, 30, 0.12);
+
+}
 
     </style>
 </head>
