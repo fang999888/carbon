@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>蕨積碳盤查顧問</title>
+    <title>蕨積碳盤查小幫手</title>
     <style>
         * {
             margin: 0;
@@ -436,7 +436,7 @@
     <div class="header">
         <h1>
             <!-- 使用根目錄的 logo.png 作為 Logo -->
-            <img src="/logo.png" alt="蕨積" class="logo-image">
+            <img src="/static/logo.png" alt="蕨積" class="logo-image">
             蕨積溫室氣體盤查顧問
             <span>綠色生活驅動</span>
         </h1>
@@ -450,7 +450,7 @@
         <div class="conversation" id="conversation">
             <div class="message bot">
                 <div class="bubble">
-                    🌍 您好，我是您的溫室氣體盤查顧問，擁有25年以上的職場經驗。<br><br>
+                    🌍 您好，我是溫室氣體盤查小幫手，擁有25年以上的職場經驗。<br><br>
                     <strong>專精領域：</strong><br>
                     • ISO 14064-1 組織碳盤查（類別1-6）<br>
                     • ISO 14067 產品碳足跡（Cradle-to-Gate/Grave）<br>
@@ -462,7 +462,7 @@
                     • 🧮 排放計算 - 輸入排放源和數據，幫您算碳排<br>
                     • 🔍 行業排放查詢 - 輸入行業+製程+排放源，查具體係數
                 </div>
-                <div class="timestamp">顧問 現在</div>
+                <div class="timestamp">小幫手 現在</div>
             </div>
         </div>
 
@@ -534,7 +534,7 @@
 
             <!-- 專家諮詢主題卡片 -->
             <div class="section-title">
-                <span>📋</span> 專家諮詢主題
+                <span>📋</span> 諮詢主題
             </div>
             <div class="coefficient-grid" id="expertTopics">
                 <div class="coef-card" data-question="請說明ISO 14064-1的類別1-6如何界定？">
@@ -668,7 +668,7 @@
         const loadingDiv = document.createElement('div');
         loadingDiv.classList.add('message', 'bot');
         loadingDiv.id = loadingId;
-        loadingDiv.innerHTML = '<div class="bubble">⏳ 顧問思考中...</div>';
+        loadingDiv.innerHTML = '<div class="bubble">⏳ 思考中.請稍後...</div>';
         conversationDiv.appendChild(loadingDiv);
 
         try {
