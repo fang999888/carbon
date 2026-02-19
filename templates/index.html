@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>蕨積碳盤查小幫手</title>
+    <title>蕨積|溫室氣體盤查小幫手</title>
     <style>
         * {
             margin: 0;
@@ -451,36 +451,38 @@
         <div class="conversation" id="conversation">
             <div class="message bot">
                <div class="bubble">
-    🌍 您好，我是<strong>溫室氣體盤查小幫手</strong>，可以協助企業或個人進行碳盤查與排放分析。
-         <div style="display: flex; gap: 30px; flex-wrap: wrap; justify-content: space-between;">
-        <!-- 左欄：專精領域 -->
-        <div style="flex: 1; min-width: 200px;">
-            <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 8px;">📌 專精領域</div>
-            <ul style="margin: 0; padding-left: 20px;">
-                <li>ISO 14064-1 組織型溫室氣體盤查（類別 1-6）</li>
-                <li>ISO 14067 產品碳足跡（搖籃到大門／搖籃到墳墓）</li>
-                <li>排放係數資料庫應用（IPCC／IEA／環保署／Ecoinvent）</li>
-                <li> 綠建築植生牆與節能減碳診斷</li>
-            </ul>
+     您好，我是<strong>溫室氣體盤查小幫手</strong>，可以協助企業或個人進行碳盤查，排放分析與各種說明。
+         <!-- 調整：縮小間距、移除多餘空行、新增台電電力係數 -->
+         <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: space-between; margin-top: 8px;">
+            <!-- 左欄：專精領域 -->
+            <div style="flex: 1; min-width: 200px;">
+                <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 4px;">📌 專精領域</div>
+                <ul style="margin: 0; padding-left: 20px;">
+                    <li>ISO 14064-1 組織型溫室氣體盤查（類別 1-6）</li>
+                    <li>ISO 14067 產品碳足跡（搖籃到大門／搖籃到墳墓）</li>
+                    <li>排放係數資料庫應用（IPCC／IEA／環保署／Ecoinvent）</li>
+                    <li> 綠建築植生牆與節能減碳診斷</li>
+                </ul>
+            </div>
+            <!-- 右欄：功能模式 -->
+            <div style="flex: 1; min-width: 200px;">
+                <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 4px;">⚙️ 功能模式</div>
+                <ul style="margin: 0; padding-left: 20px;">
+                    <li>一般諮詢：解答各類碳盤查問題</li>
+                    <li>行業分析：輸入行業名稱，取得排放結構</li>
+                    <li>排放計算：自動估算碳排放量</li>
+                    <li>排放係數查詢：依行業與製程查詢具體係數</li>
+                </ul>
+            </div>
         </div>
-        <!-- 右欄：功能模式 -->
-        <div style="flex: 1; min-width: 200px;">
-            <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 8px;">⚙️ 功能模式</div>
-            <ul style="margin: 0; padding-left: 20px;">
-                <li>一般諮詢：解答各類碳盤查問題</li>
-                <li>行業分析：輸入行業名稱，取得排放結構</li>
-                <li>排放計算：自動估算碳排放量</li>
-                <li>排放係數查詢：依行業與製程查詢具體係數</li>
-            </ul>
+        <!-- 新增台電最新電力係數 -->
+        <div style="margin-top: 8px; font-size: 0.9rem; color: #2f5e4e; border-top: 1px dashed #9bc0a2; padding-top: 6px;">
+            🔌 台電最新電力排放係數：0.424 kg CO₂e/度 (2025)
         </div>
-
+        <!-- 移除原先的 <br>，直接接結尾文字 -->
+        <div style="margin-top: 6px;">請直接輸入您的問題或數據，我將協助您完成盤查與分析。</div>
     </div>
 
-    <br>
-    請直接輸入您的問題或數據，我將協助您完成盤查與分析。
-</div>
-
-           
                 <div class="timestamp">小幫手 現在</div>
             </div>
         </div>
