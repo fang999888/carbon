@@ -46,7 +46,7 @@ def health():
 # ========== 一般諮詢 ==========
 @app.route('/api/chat', methods=['POST'])
 def chat():
-    """一般諮詢 - 穩定版本"""
+    """一般諮詢 - 包含備用回應機制"""
     logger.info("收到 /api/chat 請求")
     
     try:
@@ -58,55 +58,105 @@ def chat():
         if not user_message:
             return jsonify({'error': '請輸入訊息'}), 400
         
+        # 檢查是否有 DeepSeek API Key
         if not DEEPSEEK_API_KEY:
             logger.error("API Key 未設定")
-            return jsonify({'error': '系統配置錯誤'}), 500
+            return jsonify({'error': '系統配置錯誤：API Key 未設定'}), 500
         
-        # 準備發送给 DeepSeek 的訊息
-        messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_message}
-        ]
-        
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {DEEPSEEK_API_KEY}"
-        }
-        
-        payload = {
-            "model": "deepseek-chat",
-            "messages": messages,
-            "temperature": 0.7,
-            "max_tokens": 1000  # 降低 tokens 加快回應
-        }
-        
-        logger.info("發送請求至 DeepSeek API")
-        
-        # 發送請求 - 使用最簡單的方式
-        response = requests.post(
-            DEEPSEEK_API_URL,
-            headers=headers,
-            json=payload,
-            timeout=30
-        )
-        
-        logger.info(f"DeepSeek 回應狀態碼: {response.status_code}")
-        
-        if response.status_code == 200:
-            result = response.json()
-            reply = result['choices'][0]['message']['content']
-            return jsonify({'reply': reply})
-        else:
-            logger.error(f"API 錯誤: {response.text[:200]}")
-            return jsonify({'error': f'AI 服務錯誤'}), 502
+        # ===== 先嘗試用 DeepSeek API =====
+        try:
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {DEEPSEEK_API_KEY}"
+            }
             
-    except requests.exceptions.Timeout:
-        logger.error("API 超時")
-        return jsonify({'error': '請求超時'}), 504
-    except Exception as e:
-        logger.error(f"錯誤: {traceback.format_exc()}")
-        return jsonify({'error': '系統錯誤'}), 500
+            payload = {
+                "model": "deepseek-chat",
+                "messages": [
+                    {"role": "system", "content": "你是一個碳管理顧問，回答要簡潔專業。"},
+                    {"role": "user", "content": user_message}
+                ],
+                "temperature": 0.7,
+                "max_tokens": 1000,
+                "top_p": 0.95,
+                "stream": False
+            }
+            
+            logger.info("嘗試呼叫 DeepSeek API")
+            
+            # 設定較短的 timeout，避免卡死
+            response = requests.post(
+                DEEPSEEK_API_URL,
+                headers=headers,
+                json=payload,
+                timeout=10  # 只等 10 秒，不行就用備用
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                reply = result['choices'][0]['message']['content']
+                logger.info("DeepSeek API 回應成功")
+                return jsonify({'reply': reply})
+            else:
+                logger.warning(f"DeepSeek API 錯誤: {response.status_code}")
+                # 繼續使用備用回應
+                
+        except requests.exceptions.Timeout:
+            logger.warning("DeepSeek API 超時，使用備用回應")
+        except requests.exceptions.ConnectionError:
+            logger.warning("DeepSeek API 連線錯誤，使用備用回應")
+        except Exception as e:
+            logger.warning(f"DeepSeek API 錯誤: {str(e)}，使用備用回應")
+        
+        # ===== 備用回應機制 =====
+        logger.info("使用備用回應機制")
+        
+        # 常見問題的本地回應
+        local_responses = {
+            '範疇一': '範疇一（直接排放）：包括固定燃燒源（鍋爐）、移動燃燒源（車輛）、製程排放（化學反應）、逸散排放（冷媒洩漏）。',
+            '範疇二': '範疇二（能源間接排放）：主要是外購電力、蒸氣、熱能。台灣電力係數 0.495 kg CO₂e/度。',
+            '範疇三': '範疇三（其他間接排放）：包含上游運輸、下游運輸、員工通勤、商務旅行、廢棄物處理等。',
+            'iso 14064': 'ISO 14064-1:2018 是組織型溫室氣體盤查標準，分為類別1（直接排放）到類別6（其他間接）。',
+            'iso 14067': 'ISO 14067:2018 是產品碳足跡計算標準，計算產品從搖籃到大門或搖籃到墳墓的碳排放。',
+            '組織邊界': '組織邊界設定有兩種方法：1.營運控制權法（對營運有控制權的設施納入）2.財務控制權法（對財務有控制權的設施納入）',
+            '電力係數': '台電2023年電力排放係數：0.495 kg CO₂e/度。來源：環境部。',
+            '天然氣': '天然氣排放係數：2.09 kg CO₂e/立方公尺。來源：環境部。',
+            '柴油': '柴油排放係數：2.61 kg CO₂e/公升。來源：環境部。',
+            '汽油': '汽油排放係數：2.26 kg CO₂e/公升。來源：環境部。',
+        }
+        
+        # 尋找匹配的關鍵字
+        reply = None
+        for key, value in local_responses.items():
+            if key in user_message:
+                reply = value
+                break
+        
+        # 如果沒有匹配，給通用回應
+        if not reply:
+            if '係數' in user_message:
+                reply = """常用排放係數：
+- 用電：0.495 kg CO₂e/度
+- 天然氣：2.09 kg CO₂e/m³
+- 柴油：2.61 kg CO₂e/L
+- 汽油：2.26 kg CO₂e/L
+資料來源：環境部碳足跡資料庫"""
+            elif '歡迎' in user_message or '你好' in user_message:
+                reply = "您好！我是碳盤查小幫手，請問您想了解什麼？我可以協助您查詢排放係數、計算碳排放、分析行業排放等。"
+            else:
+                reply = f"""關於「{user_message}」的問題，建議您：
+1. 查詢特定排放源的係數（例如：用電係數）
+2. 詢問 ISO 標準（例如：ISO 14064）
+3. 了解範疇分類（例如：什麼是範疇一？）
 
+目前 AI 服務暫時不穩定，請稍後再試完整查詢。"""
+        
+        return jsonify({'reply': f"[離線模式] {reply}"})
+        
+    except Exception as e:
+        logger.error(f"聊天錯誤: {traceback.format_exc()}")
+        # 即使發生錯誤，也給使用者一個友善的回應
+        return jsonify({'reply': '系統暫時忙碌，請稍後再試。您可以嘗試詢問排放係數等基本問題。'}), 200
 # ========== 行業排放查詢 ==========
 @app.route('/api/industry-emissions', methods=['POST'])
 def industry_emissions():
