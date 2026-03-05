@@ -1,6 +1,5 @@
-Flask==2.3.3
-Flask-CORS==4.0.0
+flask==2.3.3
+flask-cors==4.0.0
 gunicorn==21.2.0
 python-dotenv==1.0.0
 requests==2.31.0
-# 不使用 openai 套件，改用 requests 直接呼叫 API
