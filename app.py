@@ -185,43 +185,54 @@ def chat():
             "model": "deepseek-chat",
             "messages": messages,
             "temperature": 0.7,
-            "max_tokens": 2500,  # 🔹 從 1000 調高為 2500，讓回答更完整
-            "top_p": 0.95
+            "max_tokens": 1500,  # 🔹 降低 max_tokens 加速回應
+            "top_p": 0.95,
+            "stream": False
         }
         
+        logger.info(f"發送請求至 DeepSeek，訊息長度: {len(user_message)}")
+        
+        # 🔹【關鍵修改】使用較短的 timeout
         response = requests.post(
             DEEPSEEK_API_URL,
             headers=headers,
             json=payload,
-            timeout=60  # 🔹 增加 timeout 到 60 秒，避免超時
+            timeout=45  # 45 秒後中斷，留 15 秒給 Gunicorn 回應
         )
         
         if response.status_code == 200:
             result = response.json()
+            reply = result['choices'][0]['message']['content']
+            
+            logger.info(f"DeepSeek 回應成功，長度: {len(reply)}")
+            
             return jsonify({
-                'reply': result['choices'][0]['message']['content'],
+                'reply': reply,
                 'timestamp': datetime.now().isoformat()
             })
         else:
-            return jsonify({'error': f'API錯誤: {response.status_code}'}), 502
+            logger.error(f"DeepSeek API 錯誤: {response.status_code}")
+            return jsonify({'error': f'AI 服務暫時無法回應'}), 502
             
+    except requests.exceptions.Timeout:
+        logger.error("DeepSeek API 超時 (45秒)")
+        return jsonify({'error': 'AI 服務回應時間過長，請稍後再試或簡化問題'}), 504
     except Exception as e:
-        logger.error(f"錯誤: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"聊天錯誤: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({'error': '系統暫時無法處理，請稍後再試'}), 500
 
 # ========== 行業排放源查詢功能（含製程）==========
 @app.route('/api/industry-emissions', methods=['POST'])
 def industry_emissions():
-    """行業別排放源查詢 - 加入製程參數"""
+    """行業別排放源查詢"""
     logger.info("收到 /api/industry-emissions 請求")
     
     try:
         data = request.json
         industry = data.get('industry', '')
-        process = data.get('process', '')  # 製程參數
+        process = data.get('process', '')
         emission_source = data.get('emission_source', '')
-        
-        logger.info(f"行業排放查詢: 行業={industry}, 製程={process}, 排放源={emission_source}")
         
         if not industry or not emission_source:
             return jsonify({'error': '請提供行業別和排放源'}), 400
@@ -229,45 +240,20 @@ def industry_emissions():
         if not DEEPSEEK_API_KEY:
             return jsonify({'error': 'API Key 未設定'}), 500
         
-        # 根據是否有製程資訊調整提示詞
-        process_info = f"製程/設備：{process}" if process else "製程/設備：未指定（請依一般行業特性推估）"
-        
-        query_prompt = f"""請針對以下資訊提供碳盤查專業建議，要非常具體實用：
+        # 🔹【簡化提示詞，減少 token 數】
+        query_prompt = f"""請針對以下查詢提供排放係數建議：
 
-行業別：{industry}
-{process_info}
+行業：{industry}
+製程：{process or '一般'}
 排放源：{emission_source}
 
-請按照以下格式回答，要特別注意製程對排放係數的影響：
+請提供：
+1. 排放係數值（要具體數值）
+2. 係數來源
+3. 計算公式
+4. 注意事項
 
-【製程特性說明】
-- 此製程/設備的排放特性：______
-- 與其他製程的差異：______
-
-【範疇分類】
-- 範疇：______ (請說明是範疇一/二/三，以及原因)
-
-【類別歸屬 (ISO 14064-1)】
-- 類別：______ (類別1-6)
-- 歸屬原因：______
-
-【適用排放係數】
-- 建議係數值：______ (請給出具體數值，例如: 0.495 kg CO2e/度)
-- 係數來源：______ (IPCC/環保署/IEA/DEFRA/Ecoinvent/其他)
-- 單位：______
-- 是否因製程而異：______ (說明製程對係數的影響)
-
-【計算公式】
-- 公式：______
-- 活動數據需求：______
-- 計算範例：______
-
-【實務建議】
-- 常見問題：______
-- 注意事項：______
-- 製程改善建議：______
-
-請確保回答非常具體實用，包含實際的係數數值，並強調製程對排放的影響。"""
+簡潔回答，但要實用。"""
         
         headers = {
             "Content-Type": "application/json",
@@ -277,44 +263,47 @@ def industry_emissions():
         payload = {
             "model": "deepseek-chat",
             "messages": [
-                {"role": "system", "content": "你是一位實用型碳管理顧問，專注於提供具體的排放係數和計算方式。回答要包含實際的數值，並特別注意不同製程對排放係數的影響。"},
+                {"role": "system", "content": "你是一個碳管理顧問，提供精簡實用的排放係數建議。"},
                 {"role": "user", "content": query_prompt}
             ],
             "temperature": 0.3,
-            "max_tokens": 2500,  # 🔹 從 1200 調高為 2500
+            "max_tokens": 1200,  # 🔹 降低 token 數
             "top_p": 0.95
         }
         
-        logger.info("發送行業排放查詢請求至 DeepSeek")
         response = requests.post(
             DEEPSEEK_API_URL,
             headers=headers,
             json=payload,
-            timeout=60  # 🔹 統一為 60 秒
+            timeout=30  # 🔹 行業查詢設為 30 秒
         )
         
         if response.status_code == 200:
             result = response.json()
-            reply_content = result['choices'][0]['message']['content']
-            logger.info("成功取得行業排放查詢回應")
-            
-            return jsonify({
-                'reply': reply_content,
-                'industry': industry,
-                'process': process,
-                'emission_source': emission_source,
-                'timestamp': datetime.now().isoformat()
-            })
+            return jsonify({'reply': result['choices'][0]['message']['content']})
         else:
-            logger.error(f"DeepSeek API 錯誤: {response.status_code}")
-            return jsonify({'error': f'查詢失敗: {response.status_code}'}), 502
+            # 🔹【備用方案】API 失敗時提供本地係數
+            local_coefficients = {
+                '用電': 0.495,
+                '天然氣': 2.09,
+                '柴油': 2.61
+            }
             
-    except requests.exceptions.Timeout:
-        logger.error("API 請求超時")
-        return jsonify({'error': '請求超時，請稍後再試'}), 504
+            fallback_reply = f"""【{industry} - {emission_source}】
+
+⚠️ AI 服務暫時無法回應，提供參考數據：
+
+常用係數：
+- 用電：0.495 kg CO₂e/度
+- 天然氣：2.09 kg CO₂e/m³
+- 柴油：2.61 kg CO₂e/L
+
+請稍後再試完整查詢。"""
+            
+            return jsonify({'reply': fallback_reply})
+            
     except Exception as e:
-        logger.error(f"行業排放查詢錯誤: {str(e)}")
-        logger.error(traceback.format_exc())
+        logger.error(f"行業查詢錯誤: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 # ========== 行業分析功能 ==========
